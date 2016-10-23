@@ -1,0 +1,42 @@
+{
+  "tl1port": 12346,
+  "capture": [
+    {
+      "protocol": "tl1",
+      "timestamp": "1992-01-01 12:12:11.000",
+      "tcpServer": "start"
+    },
+    {
+      "protocol": "tl1",
+      "timestamp": "1992-01-01 12:12:12.000",
+      "input": "ACT-USER:SEATTLE:ADMIN:0001::ADMIN;"
+    },
+    {
+      "protocol": "tl1",
+      "timestamp": "1992-01-01 12:12:14.000",
+      "output": "\r\n\n   SEATTLE 93-06-02 12:00:00\r\n** 1 REPT PM T1\r\n   \"AID-T1-1:CVL,50\"\r\n   \"AID-T1-2:CVL,10\"\r\n   \"AID-T1-n:CVL,22\"\r\n;",
+      "multiplicity": "1"
+    },
+    {
+      "protocol": "tl1",
+      "timestamp": "1992-01-01 12:12:16.000",
+      "output": "\r\n\n   SEATTLE 85-10-09 22:05:12\r\nM  0001 COMPLD\r\n;"
+    },
+    {
+      "protocol": "tl1",
+      "timestamp": "1992-01-01 12:12:18.000",
+      "output": "\r\n\n   SEATTLE 93-06-02 12:00:00\r\n** 2 REPT PM T1\r\n   \"AID-T1-1:CVL,50\"\r\n   \"AID-T1-2:CVL,10\"\r\n   \"AID-T1-n:CVL,22\"\r\n;",
+      "multiplicity": "1"
+    },
+    {
+      "protocol": "tl1",
+      "timestamp": "1992-01-01 12:12:12.000",
+      "input": "RTRV-EQPT:SEATTLE:ALL:0001;"
+    },
+    {
+      "protocol": "tl1",
+      "timestamp": "1992-01-01 12:12:15.000",
+      "tcpServer": "disconnect"
+    }
+  ]
+}
