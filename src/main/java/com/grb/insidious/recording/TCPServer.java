@@ -1,4 +1,4 @@
-package com.grb.insidious.capture;
+package com.grb.insidious.recording;
 
 public enum TCPServer {
 	DISCONNECT,
@@ -12,6 +12,6 @@ public enum TCPServer {
 				return values[i];
 			}
 		}
-		throw new IllegalArgumentException("No enum constant com.grb.insidious.capture.TCPServer." + value);
+		throw new IllegalArgumentException("No enum constant com.grb.insidious.recording.TCPServer." + value);
 	}
 }

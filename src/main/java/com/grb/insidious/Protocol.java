@@ -10,6 +10,6 @@ public enum Protocol {
 				return values[i];
 			}
 		}
-		throw new IllegalArgumentException("No enum constant com.grb.insidious.capture.Protocol." + value);
+		throw new IllegalArgumentException("No enum constant com.grb.insidious.recording.Protocol." + value);
 	}
 }

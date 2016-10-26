@@ -5,25 +5,19 @@ import java.text.ParseException;
 import java.util.*;
 
 import com.grb.insidious.Protocol;
-import com.grb.insidious.capture.Capture;
-import com.grb.insidious.capture.CaptureElement;
-import com.grb.tl1.TL1AckMessage;
-import com.grb.tl1.TL1AgentDecoder;
-import com.grb.tl1.TL1InputMessage;
-import com.grb.tl1.TL1ManagerDecoder;
-import com.grb.tl1.TL1MessageMaxSizeExceededException;
-import com.grb.tl1.TL1OutputMessage;
-import com.grb.tl1.TL1ResponseMessage;
+import com.grb.insidious.recording.Recording;
+import com.grb.insidious.recording.RecordingElement;
+import com.grb.tl1.*;
 
 /**
  * Created by gbromfie on 10/17/16.
  */
-public class TL1CaptureManager {
-    class TL1CaptureTimerTask extends TimerTask {
+public class TL1RecordingManager {
+    class TL1RecordingTimerTask extends TimerTask {
         public OutputElement _element;
         public String _ctag;
         
-        public TL1CaptureTimerTask(OutputElement element, String ctag) {
+        public TL1RecordingTimerTask(OutputElement element, String ctag) {
             _element = element;
             _ctag = ctag;
         }
@@ -53,7 +47,7 @@ public class TL1CaptureManager {
                 	updateTag(_element.tl1OutputMsg);
                 	_listener.onTL1Output(_element.tl1OutputMsg);
                 } else {
-                    _timer.schedule(new TL1CaptureTimerTask(_element, _ctag), _element.timestamp - currentTS);
+                    _timer.schedule(new TL1RecordingTimerTask(_element, _ctag), _element.timestamp - currentTS);
                     break;
                 }
             }
@@ -63,32 +57,32 @@ public class TL1CaptureManager {
     private String _sessionName;
     private HashMap<String, HashMap<String, HashMap<String, InputElement>>> _commandMap;
     private HashMap<String, HashMap<String, InputElement>> _outstandingCommandMap;
-    private Object _lastElementAdded;
+    private HashMap<String, Object> _lastElementMap;
     private Timer _timer;
 	private TL1AgentDecoder _agentDecoder;
 	private TL1ManagerDecoder _managerDecoder;
-	private TL1CaptureListener _listener;
+	private TL1RecordingListener _listener;
 	
-    public TL1CaptureManager(String sessionName, TL1CaptureListener listener) {
+    public TL1RecordingManager(String sessionName, TL1RecordingListener listener) {
     	_sessionName = sessionName;
     	_listener = listener;
     	_commandMap = new HashMap<String, HashMap<String, HashMap<String, InputElement>>>();
     	_outstandingCommandMap = new HashMap<String, HashMap<String, InputElement>>();
-    	_lastElementAdded = null;
-    	_timer = new Timer("TL1CaptureManager_" + _sessionName, true);
+        _lastElementMap = new HashMap<String, Object>();
+    	_timer = new Timer("TL1RecordingManager_" + _sessionName, true);
     	_agentDecoder = new TL1AgentDecoder();
     	_managerDecoder = new TL1ManagerDecoder();
     }
     
-    public void setCapture(Capture capture) throws TL1MessageMaxSizeExceededException, ParseException {
+    public void setRecording(Recording recording) throws TL1MessageMaxSizeExceededException, ParseException {
     	_commandMap.clear();
     	_outstandingCommandMap.clear();
-    	_lastElementAdded = null;
+        _lastElementMap.clear();
     	_timer.cancel();
-    	_timer = new Timer("TL1CaptureManager_" + _sessionName, true);
-		if (capture.elements != null) {
-			for(int i = 0; i < capture.elements.length; i++) {
-				CaptureElement element = capture.elements[i];
+    	_timer = new Timer("TL1RecordingManager_" + _sessionName, true);
+		if (recording.elements != null) {
+			for(int i = 0; i < recording.elements.length; i++) {
+				RecordingElement element = recording.elements[i];
 				if (element.protocol.equals(Protocol.TL1)) {
 					if (element.input != null) {
 						ByteBuffer buffer = ByteBuffer.wrap(element.input.getBytes());
@@ -142,7 +136,7 @@ public class TL1CaptureManager {
         } else {
             element.appendInput(newElement);
         }
-        _lastElementAdded = newElement;
+        setLastElementAdded(input.getTid(), newElement);
 
         HashMap<String, InputElement> ctagMap = _outstandingCommandMap.get(input.getTid());
         if (ctagMap == null) {
@@ -178,7 +172,7 @@ public class TL1CaptureManager {
                 // missing request for ack
             } else {
                 matchElement.appendOutput(newElement);
-                _lastElementAdded = newElement;
+                setLastElementAdded(matchElement.tl1InputMsg.getTid(), newElement);
             }
         } else if (outputMsg instanceof TL1ResponseMessage) {
             TL1ResponseMessage resp = (TL1ResponseMessage)outputMsg;
@@ -191,21 +185,24 @@ public class TL1CaptureManager {
                     // missing request for response
                 } else {
                     element.appendOutput(newElement);
-                    _lastElementAdded = newElement;
+                    setLastElementAdded(resp.getTid(), newElement);
+                    ctagMap.remove(resp.getCTAG());
                 }
             }
-        } else {
-            if (_lastElementAdded == null) {
+        } else if (outputMsg instanceof TL1AOMessage) {
+            TL1AOMessage ao = (TL1AOMessage)outputMsg;
+            Object lastElementAdded = getLastElementAdded(ao.getTid());
+            if (lastElementAdded == null) {
                 // no request or response to tie to
             } else {
-                if(_lastElementAdded instanceof InputElement) {
-                    InputElement element = (InputElement)_lastElementAdded;
+                if(lastElementAdded instanceof InputElement) {
+                    InputElement element = (InputElement)lastElementAdded;
                     element.appendOutput(newElement);
                 } else {
-                    OutputElement element = (OutputElement)_lastElementAdded;
+                    OutputElement element = (OutputElement)lastElementAdded;
                     element.next = newElement;
                 }
-                _lastElementAdded = newElement;
+                setLastElementAdded(ao.getTid(), newElement);
             }
         }
     }
@@ -236,18 +233,20 @@ public class TL1CaptureManager {
         InputElement inElement = getUnprocessedInputElement(input);
         inElement.processed = true;
         OutputElement outElement = inElement.output;
-        while (outElement != null) {
-            if ((inElement.timestamp == null) || (outElement.timestamp == null) ||
-                    ((outElement.timestamp - inElement.timestamp) == 0)) {
-                // send immediately
-                System.out.println(outElement.tl1OutputMsg);
-                outElement = outElement.next;
-            } else {
-                // use timer
-                _timer.schedule(new TL1CaptureTimerTask(outElement, input.getCTAG()), outElement.timestamp - inElement.timestamp);
-                break;
-            }
+        if ((inElement.timestamp == null) || (outElement.timestamp == null) ||
+                ((outElement.timestamp - inElement.timestamp) <= 0)) {
+            _timer.schedule(new TL1RecordingTimerTask(outElement, input.getCTAG()), 0);
+        } else {
+            _timer.schedule(new TL1RecordingTimerTask(outElement, input.getCTAG()), outElement.timestamp - inElement.timestamp);
         }
+    }
+
+    private Object getLastElementAdded(String tid) {
+        return _lastElementMap.get(tid);
+    }
+
+    private void setLastElementAdded(String tid, Object element) {
+        _lastElementMap.put(tid, element);
     }
 
     // TODO: NEED TO UPDATE ATAG ON OUTGOING
@@ -255,7 +254,7 @@ public class TL1CaptureManager {
     
     public static void main(String[] args) {
         try {
-            TL1CaptureManager test = new TL1CaptureManager("test", new TL1CaptureListener() {
+            TL1RecordingManager test = new TL1RecordingManager("test", new TL1RecordingListener() {
 				@Override
 				public void onTL1Output(TL1OutputMessage outputMsg) {
 					System.out.println(outputMsg);

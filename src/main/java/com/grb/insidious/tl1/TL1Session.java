@@ -3,6 +3,8 @@ package com.grb.insidious.tl1;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.util.HashMap;
@@ -10,14 +12,14 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 import com.grb.insidious.Protocol;
 import com.grb.insidious.Session;
-import com.grb.insidious.capture.Capture;
+import com.grb.insidious.recording.Recording;
 import com.grb.insidious.ssh.SSHServer;
 import com.grb.insidious.ssh.SSHServerClient;
 import com.grb.insidious.ssh.SSHServerClientListener;
 import com.grb.tl1.TL1MessageMaxSizeExceededException;
 import com.grb.tl1.TL1OutputMessage;
 
-public class TL1Session implements Session, TL1CaptureListener, SSHServerClientListener {
+public class TL1Session implements Session, TL1RecordingListener, SSHServerClientListener {
     private enum ReaderThreadOperation {
         START,
         STOP,
@@ -34,7 +36,7 @@ public class TL1Session implements Session, TL1CaptureListener, SSHServerClientL
 	private String _id;
 	private int _port;
 	private String _clientSource;
-	private TL1CaptureManager _captureMgr;
+	private TL1RecordingManager _recordingMgr;
 	private String _source;
 	private SSHServer _sshServer;
 	private SSHServerClient _client;
@@ -43,9 +45,9 @@ public class TL1Session implements Session, TL1CaptureListener, SSHServerClientL
 		_id = id;
 		_port = port;
 		_clientSource = "";
-		_captureMgr = new TL1CaptureManager(_id, this);
+		_recordingMgr = new TL1RecordingManager(_id, this);
 		_source = "";
-		_sshServer = new SSHServer(_id, _port, "/Users/Graham/Documents/workspace/insidious/keys/host.ser", this);
+		_sshServer = new SSHServer(_id, _port, "/Users/gbromfie/Development/Insidious/keys/host.ser", this);
 		_sshServer.start();
 		_client = null;
 	}
@@ -79,9 +81,37 @@ public class TL1Session implements Session, TL1CaptureListener, SSHServerClientL
 		return _source;
 	}
 
-    public void setCapture(String source, Capture capture) throws TL1MessageMaxSizeExceededException, ParseException {
-    	_source = source;
-    	_captureMgr.setCapture(capture);
+    public void setRecording(Recording recording) throws TL1MessageMaxSizeExceededException, ParseException, MalformedURLException, IOException {
+		BufferedReader in = null;
+		try {
+			if (recording.recordingURL != null) {
+				URL recordingURL = new URL(recording.recordingURL);
+				if (recordingURL != null) {
+					in = new BufferedReader(
+							new InputStreamReader(recordingURL.openStream()));
+
+					String inputLine;
+					StringBuilder bldr = new StringBuilder();
+					while ((inputLine = in.readLine()) != null) {
+						bldr.append(inputLine);
+					}
+					Recording recordingFromURL = Recording.parseString(bldr.toString());
+					recordingFromURL.protocol = recording.protocol;
+					recordingFromURL.port = recording.port;
+					_recordingMgr.setRecording(recordingFromURL);
+					_source = recording.recordingURL;
+				}
+			} else 	if (recording.elements != null) {
+				_recordingMgr.setRecording(recording);
+				_source = "inline recording";
+			} else {
+				// error nothing specified
+			}
+		} finally {
+			if (in != null) {
+				in.close();
+			}
+		}
     }
 
 	@Override
@@ -137,7 +167,7 @@ public class TL1Session implements Session, TL1CaptureListener, SSHServerClientL
                         }
                         if (enabled) {
                             buffer.flip();
-                            _captureMgr.processInput(buffer);
+                            _recordingMgr.processInput(buffer);
                             buffer.clear();
                         }
                     }

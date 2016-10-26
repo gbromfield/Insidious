@@ -1,10 +1,10 @@
-package com.grb.insidious.capture;
+package com.grb.insidious.recording;
 
 import java.util.Date;
 
 import com.grb.insidious.Protocol;
 
-public class CaptureElement {
+public class RecordingElement {
 	public Protocol protocol;
 	public Date timestamp;
 	public String timestampStr;

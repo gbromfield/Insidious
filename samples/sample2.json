@@ -1,5 +1,5 @@
 {
-"capture": [
+"recording": [
 {
   "protocol": "tl1",
   "timestamp": "2016-10-19 14:17:29,676",
@@ -15,9 +15,14 @@
   "timestamp": "2016-10-19 14:17:32,135",
   "input": "RTRV-NETYPE:PV0414E::2;"
 },
+  {
+    "protocol": "tl1",
+    "timestamp": "2016-10-19 14:17:35,372",
+    "output": "\r\n\n   \"PV0414E\" 15-12-09 06:01:41\r\n*C  1 REPT ALM EQPT\r\n   \"40GMUX-1-10:CL,EQPT_MISSING,SA,11-26,14-14-33,NEND,NA:\\\"Circuit Pack Missing\\\",NONE:0100000045-0062-0035,:YEAR=2015,MODE=NONE\"\r\n;"
+  },
 {
   "protocol": "tl1",
-  "timestamp": "2016-10-19 14:17:32,372",
+  "timestamp": "2016-10-19 14:17:38,372",
   "output": "\r\n\n   \"PV0414E\" 16-10-19 14:19:36\r\nM  2 COMPLD\r\n   \"CIENA,\\\"6500 OPTICAL\\\",CNE,\\\"REL1150Z.WM\\\"\"\r\n;"
 },
 {

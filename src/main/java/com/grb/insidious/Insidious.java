@@ -1,20 +1,14 @@
 package com.grb.insidious;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.CountDownLatch;
 
-import com.ciena.logx.LogX;
-import com.ciena.logx.logfile.ra.insidious.InsidiousOutputContext;
-import com.ciena.logx.logfile.ra.insidious.logrecord.TL1LogRecordParser;
-import com.grb.insidious.capture.Capture;
-import com.grb.insidious.rest.SessionRequest;
+import com.grb.insidious.recording.Recording;
 import com.grb.insidious.tl1.TL1Session;
 
 import spark.Request;
@@ -36,40 +30,22 @@ public class Insidious {
 	public Insidious() {
 	}
 		
-	private static Session[] createSessions(String client, SessionRequest req) {
-		BufferedReader in = null;
+	private static Session createSession(String client, Recording recording) {
+		Session session = null;
 		try {
-			Session[] sessions = new Session[req.elements.length];
-			for(int i = 0; i < req.elements.length; i++) {
-				long sessionId = getNextSessionId();
-				if (req.elements[i].protocol.equals(Protocol.TL1)) {
-			    	TL1Session tl1Session = new TL1Session(String.valueOf(sessionId), req.elements[i].port);
-			    	tl1Session.setClient(client);
-			    	sessions[i] = tl1Session;
-			    	sessionMap.put(tl1Session.getId(), tl1Session);
-			    	URL captureURL = new URL(req.elements[i].captureURL);
-			        in = new BufferedReader(
-			        new InputStreamReader(captureURL.openStream()));
-
-			        String inputLine;
-			        StringBuilder bldr = new StringBuilder();
-			        while ((inputLine = in.readLine()) != null) {
-			        	bldr.append(inputLine);
-			        }
-			        tl1Session.setCapture(req.elements[i].captureURL, Capture.parseString(bldr.toString()));
-				} else {
-					// error
-				}
+			long sessionId = getNextSessionId();
+			if (recording.protocol.equals(Protocol.TL1)) {
+				TL1Session tl1Session = new TL1Session(String.valueOf(sessionId), recording.port);
+				session = tl1Session;
+				tl1Session.setClient(client);
+				sessionMap.put(tl1Session.getId(), tl1Session);
+				tl1Session.setRecording(recording);
+			} else {
+				// error
 			}
-			return sessions;
+			return session;
 		} catch(Exception e) {
 			return null;
-		} finally {
-			if (in != null) {
-				try {
-					in.close();
-				} catch (IOException e) {}
-			}
 		}
 	}
 	
@@ -79,25 +55,16 @@ public class Insidious {
 	}
 	
 	public static void printSyntax() {
-		System.out.println(";syntax: Insidious -f capture");
+		System.out.println(";syntax: Insidious -f recording");
 	}
 	
 	public static void main(String[] args) {
 		post("/sessions", (request, response) -> {
 			response.type("application/json");
 			String body = request.body();
-			SessionRequest req = SessionRequest.parseString(body);
-			Session[] sessions = createSessions(request.ip(), req);
-			StringBuilder bldr = new StringBuilder();
-			bldr.append("{\"sessions\": [");
-			for(int i = 0; i < sessions.length; i++) {
-				if (i > 0) {
-					bldr.append(",");
-				}
-				bldr.append(encodeSessionJSON(sessions[i]));
-			}
-			bldr.append("]}");
-		    return bldr.toString();
+			Recording recording = Recording.parseString(body);
+			Session session = createSession(request.ip(), recording);
+			return encodeSessionJSON(session);
 		});
 		get("/sessions", (request, response) -> {
 			response.type("application/json");
@@ -146,10 +113,10 @@ public class Insidious {
             LogX logx = new LogX(inputFileList, ctx);
             logx.run();
             System.out.println(ctx.toString());
-	    	Capture capture = Capture.parseString(ctx.toString());
-	    	tl1Session.setCapture("", capture);
+	    	Recording recording = Recording.parseString(ctx.toString());
+	    	tl1Session.setRecording("", recording);
 */
-//	    	Capture capture = Capture.parseFile(args[1]);
+//	    	Recording recording = Recording.parseFile(args[1]);
 	        
             ExitLatch.await();
             System.exit(0);
