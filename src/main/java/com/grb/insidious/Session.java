@@ -6,4 +6,5 @@ public interface Session {
 	public int getPort();
 	public String getClient();
 	public String getSource();
+	public void close();
 }

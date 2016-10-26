@@ -96,7 +96,12 @@ public class Insidious {
 		delete("/session/:name", new Route() {	
 			@Override
 			public Object handle(Request request, Response response) throws Exception {
-				// TODO Auto-generated method stub
+				Session session = sessionMap.get(request.params(":name"));
+				if (session != null) {
+					session.close();
+					sessionMap.remove(request.params(":name"));
+					return encodeSessionJSON(session);
+				}
 				return null;
 			}
 		});

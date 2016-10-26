@@ -81,6 +81,12 @@ public class SSHServer {
     	}
     }
 
+    public void close() {
+        if (_server != null) {
+            _server.close(true);
+        }
+    }
+
     public int getPort() {
     	return _port;
     }

@@ -47,7 +47,7 @@ public class TL1Session implements Session, TL1RecordingListener, SSHServerClien
 		_clientSource = "";
 		_recordingMgr = new TL1RecordingManager(_id, this);
 		_source = "";
-		_sshServer = new SSHServer(_id, _port, "/Users/gbromfie/Development/Insidious/keys/host.ser", this);
+		_sshServer = new SSHServer(_id, _port, "keys/host.ser", this);
 		_sshServer.start();
 		_client = null;
 	}
@@ -79,6 +79,16 @@ public class TL1Session implements Session, TL1RecordingListener, SSHServerClien
 	@Override
 	public String getSource() {
 		return _source;
+	}
+
+	@Override
+	public void close() {
+		if (_client != null) {
+			_client.close();
+		}
+		if (_sshServer != null) {
+			_sshServer.close();
+		}
 	}
 
     public void setRecording(Recording recording) throws TL1MessageMaxSizeExceededException, ParseException, MalformedURLException, IOException {
