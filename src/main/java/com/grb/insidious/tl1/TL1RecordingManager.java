@@ -134,10 +134,10 @@ public class TL1RecordingManager {
             cmdCodeMap = new HashMap<String, HashMap<String, InputElement>>();
             _commandMap.put(input.getTid(), cmdCodeMap);
         }
-        HashMap<String, InputElement> aidMap = cmdCodeMap.get(input.getCmdCode());
+        HashMap<String, InputElement> aidMap = cmdCodeMap.get(input.getCmdCode().toUpperCase());
         if (aidMap == null) {
             aidMap = new HashMap<String, InputElement>();
-            cmdCodeMap.put(input.getCmdCode(), aidMap);
+            cmdCodeMap.put(input.getCmdCode().toUpperCase(), aidMap);
         }
         InputElement element = aidMap.get(input.getAid());
         if (element == null) {
@@ -248,7 +248,7 @@ public class TL1RecordingManager {
     public InputElement getUnprocessedInputElement(String tidToUse, TL1InputMessage input) {
         HashMap<String, HashMap<String, InputElement>> cmdCodeMap = _commandMap.get(tidToUse);
         if(cmdCodeMap != null) {
-            HashMap<String, InputElement> aidMap = cmdCodeMap.get(input.getCmdCode());
+            HashMap<String, InputElement> aidMap = cmdCodeMap.get(input.getCmdCode().toUpperCase());
             if(aidMap != null) {
                 InputElement element = aidMap.get(input.getAid());
                 while((element != null) && (element.processed)) {
