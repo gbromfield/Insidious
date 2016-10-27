@@ -10,6 +10,7 @@ public enum Protocol {
 				return values[i];
 			}
 		}
-		throw new IllegalArgumentException("No enum constant com.grb.insidious.recording.Protocol." + value);
+		throw new IllegalArgumentException(
+				String.format("No enum constant %s.%s exists", Protocol.class.getName(), value));
 	}
 }
