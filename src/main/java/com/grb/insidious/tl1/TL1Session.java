@@ -94,6 +94,14 @@ public class TL1Session implements Session, TL1RecordingListener, SSHServerClien
 		if (_sshServer != null) {
 			_sshServer.close();
 		}
+		if (_clientReadQ != null) {
+			try {
+				_clientReadQ.put(ReaderThreadOperation.CLOSE);
+			} catch (InterruptedException e) {}
+		}
+		if (_recordingMgr != null) {
+			_recordingMgr.close();
+		}
 	}
 
     public void setRecording(Recording recording) throws TL1MessageMaxSizeExceededException, ParseException, MalformedURLException, IOException {

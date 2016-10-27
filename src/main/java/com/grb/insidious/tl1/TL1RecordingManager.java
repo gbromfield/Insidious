@@ -32,7 +32,7 @@ public class TL1RecordingManager {
         	} else {
         	}
         }
-        
+
         @Override
         public void run() {
             // send _element.tl1OutputMsg
@@ -75,7 +75,14 @@ public class TL1RecordingManager {
     	_managerDecoder = new TL1ManagerDecoder();
         _blankTID = null;
     }
-    
+
+    public void close() {
+        _commandMap.clear();
+        _outstandingCommandMap.clear();
+        _lastElementMap.clear();
+        _timer.cancel();
+    }
+
     public void setRecording(Recording recording) throws TL1MessageMaxSizeExceededException, ParseException {
     	_commandMap.clear();
     	_outstandingCommandMap.clear();
