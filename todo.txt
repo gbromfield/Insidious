@@ -1,0 +1,2 @@
+1. allow ctrl-d to close the ssh session
+2. make sure threads cleaned up on session removal

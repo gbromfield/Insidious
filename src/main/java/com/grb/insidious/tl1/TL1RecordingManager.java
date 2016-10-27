@@ -62,7 +62,8 @@ public class TL1RecordingManager {
 	private TL1AgentDecoder _agentDecoder;
 	private TL1ManagerDecoder _managerDecoder;
 	private TL1RecordingListener _listener;
-	
+	private String _blankTID;
+
     public TL1RecordingManager(String sessionName, TL1RecordingListener listener) {
     	_sessionName = sessionName;
     	_listener = listener;
@@ -72,6 +73,7 @@ public class TL1RecordingManager {
     	_timer = new Timer("TL1RecordingManager_" + _sessionName, true);
     	_agentDecoder = new TL1AgentDecoder();
     	_managerDecoder = new TL1ManagerDecoder();
+        _blankTID = null;
     }
     
     public void setRecording(Recording recording) throws TL1MessageMaxSizeExceededException, ParseException {
@@ -136,7 +138,11 @@ public class TL1RecordingManager {
         } else {
             element.appendInput(newElement);
         }
-        setLastElementAdded(input.getTid(), newElement);
+        if ((input.getTid().isEmpty()) && (_blankTID != null)) {
+            setLastElementAdded(_blankTID, newElement);
+        } else {
+            setLastElementAdded(input.getTid(), newElement);
+        }
 
         HashMap<String, InputElement> ctagMap = _outstandingCommandMap.get(input.getTid());
         if (ctagMap == null) {
@@ -175,15 +181,26 @@ public class TL1RecordingManager {
                 setLastElementAdded(matchElement.tl1InputMsg.getTid(), newElement);
             }
         } else if (outputMsg instanceof TL1ResponseMessage) {
+            boolean processingBlankTID = false;
             TL1ResponseMessage resp = (TL1ResponseMessage)outputMsg;
             HashMap<String, InputElement> ctagMap = _outstandingCommandMap.get(resp.getTid());
-            if (ctagMap == null) {
-                // missing request for response
+            if ((ctagMap == null) || (ctagMap.isEmpty())) {
+                // check for the blank tid requests
+                if ((_blankTID == null) || (_blankTID.equals(resp.getTid()))){
+                    ctagMap = _outstandingCommandMap.get("");
+                    processingBlankTID = true;
+                }
+            }
+            if ((ctagMap == null) || (ctagMap.isEmpty())) {
+                // not found
             } else {
                 InputElement element = ctagMap.get(resp.getCTAG());
                 if (element == null) {
                     // missing request for response
                 } else {
+                    if (processingBlankTID) {
+                        _blankTID = resp.getTid();
+                    }
                     element.appendOutput(newElement);
                     setLastElementAdded(resp.getTid(), newElement);
                     ctagMap.remove(resp.getCTAG());
@@ -192,6 +209,10 @@ public class TL1RecordingManager {
         } else if (outputMsg instanceof TL1AOMessage) {
             TL1AOMessage ao = (TL1AOMessage)outputMsg;
             Object lastElementAdded = getLastElementAdded(ao.getTid());
+            if (lastElementAdded == null) {
+                // check for the blank tid
+                lastElementAdded = getLastElementAdded("");
+            }
             if (lastElementAdded == null) {
                 // no request or response to tie to
             } else {
@@ -208,7 +229,17 @@ public class TL1RecordingManager {
     }
 
     public InputElement getUnprocessedInputElement(TL1InputMessage input) {
-        HashMap<String, HashMap<String, InputElement>> cmdCodeMap = _commandMap.get(input.getTid());
+        InputElement element = getUnprocessedInputElement(input.getTid(), input);
+        if ((element == null) && (input.getTid().isEmpty()) && (_blankTID != null)) {
+            return getUnprocessedInputElement(_blankTID, input);
+        } else if ((element == null) && (input.getTid().equals(_blankTID))) {
+            return getUnprocessedInputElement("", input);
+        }
+        return element;
+    }
+
+    public InputElement getUnprocessedInputElement(String tidToUse, TL1InputMessage input) {
+        HashMap<String, HashMap<String, InputElement>> cmdCodeMap = _commandMap.get(tidToUse);
         if(cmdCodeMap != null) {
             HashMap<String, InputElement> aidMap = cmdCodeMap.get(input.getCmdCode());
             if(aidMap != null) {

@@ -41,14 +41,13 @@ public class TL1Session implements Session, TL1RecordingListener, SSHServerClien
 	private SSHServer _sshServer;
 	private SSHServerClient _client;
 	
-	public TL1Session(String id, int port) throws IOException {
+	public TL1Session(String id) {
 		_id = id;
-		_port = port;
+		_port = 0;
 		_clientSource = "";
 		_recordingMgr = new TL1RecordingManager(_id, this);
 		_source = "";
-		_sshServer = new SSHServer(_id, _port, "keys/host.ser", this);
-		_sshServer.start();
+		_sshServer = null;
 		_client = null;
 	}
 
@@ -82,6 +81,12 @@ public class TL1Session implements Session, TL1RecordingListener, SSHServerClien
 	}
 
 	@Override
+	public void start() throws IOException {
+		_sshServer = new SSHServer(_id, _port, "keys/host.ser", this);
+		_sshServer.start();
+	}
+
+	@Override
 	public void close() {
 		if (_client != null) {
 			_client.close();
@@ -107,11 +112,23 @@ public class TL1Session implements Session, TL1RecordingListener, SSHServerClien
 					}
 					Recording recordingFromURL = Recording.parseString(bldr.toString());
 					recordingFromURL.protocol = recording.protocol;
-					recordingFromURL.port = recording.port;
+					if (recording.port != null) {
+						recordingFromURL.port = recording.port;
+					}
+					if (recordingFromURL.port == null) {
+						_port = 0;
+					} else {
+						_port = recordingFromURL.port;
+					}
 					_recordingMgr.setRecording(recordingFromURL);
 					_source = recording.recordingURL;
 				}
 			} else 	if (recording.elements != null) {
+				if (recording.port == null) {
+					_port = 0;
+				} else {
+					_port = recording.port;
+				}
 				_recordingMgr.setRecording(recording);
 				_source = "inline recording";
 			} else {

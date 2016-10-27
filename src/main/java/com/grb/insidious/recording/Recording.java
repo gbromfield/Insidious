@@ -11,7 +11,7 @@ import com.grb.insidious.Protocol;
 
 public class Recording {
 	public Protocol protocol;
-	public int port = 0;
+	public Integer port = null;
 	public String recordingURL;
 	public RecordingElement[] elements;
 
