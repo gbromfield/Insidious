@@ -1,3 +1,0 @@
-1. allow ctrl-d to close the ssh session
-2. make sure threads cleaned up on session removal
-3. move the SSH key file to the executable jar file
