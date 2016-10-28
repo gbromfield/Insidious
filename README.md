@@ -39,6 +39,9 @@ To start the simulator:
 
     java -jar target/insidious-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 
+**Note: Insidious should be started in Insidious' root directory since it loads an SSH key file assumed to be in
+the "keys" subdirectory. This should be moved to be a resource in the jar file. **
+
 When the simulator is started it receives instructions through the rest interface (port 4567) to load recordings 
 and open up ports.
 
