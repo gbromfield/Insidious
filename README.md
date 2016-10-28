@@ -1,5 +1,11 @@
 ## Dependencies
-Insidious has dependencies on a set of libraries in GitHub. They need to be installed.
+Insidious needs:
+
+1. Java 8
+2. Maven
+3. A set of libraries in GitHub
+
+To install the set of libraries from GitHub:
 
     git clone https://github.com/gbromfield/GrbLibs2.git
     cd Grblibs2
