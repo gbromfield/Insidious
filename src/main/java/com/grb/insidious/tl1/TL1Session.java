@@ -170,45 +170,46 @@ public class TL1Session implements Session, TL1RecordingListener, SSHServerClien
                 ByteBuffer buffer = ByteBuffer.allocate(data.length);
                 BufferedReader r = new BufferedReader(new InputStreamReader(client.getIn()));
                 boolean enabled = true;
-                try {
-                    while (true) {
-                        while ((!enabled) || (_clientReadQ.size() > 0)) {
-                            ReaderThreadOperation oper = _clientReadQ.take();
-                            if (oper.equals(ReaderThreadOperation.START)) {
-                                enabled = true;
-                            } else if (oper.equals(ReaderThreadOperation.STOP)) {
-                                enabled = false;
-                            } else {
-                                return;
-                            }
-                        }
-                        int numRead = r.read(data);
-                        if (numRead == -1) {
+				while (true) {
+					try {
+						while ((!enabled) || (_clientReadQ.size() > 0)) {
+							ReaderThreadOperation oper = _clientReadQ.take();
+							if (oper.equals(ReaderThreadOperation.START)) {
+								enabled = true;
+							} else if (oper.equals(ReaderThreadOperation.STOP)) {
+								enabled = false;
+							} else {
+								return;
+							}
+						}
+						int numRead = r.read(data);
+						if (numRead == -1) {
 //                            close();
-                            return;
-                        }
-                        while (_clientReadQ.size() > 0) {
-                            ReaderThreadOperation oper = _clientReadQ.take();
-                            if (oper.equals(ReaderThreadOperation.START)) {
-                                enabled = true;
-                            } else if (oper.equals(ReaderThreadOperation.STOP)) {
-                                enabled = false;
-                            } else {
-                                return;
-                            }
-                        }
-                        for(int i = 0; i < numRead; i++) {
-                            buffer.put((byte) data[i]);
-                        }
-                        if (enabled) {
-                            buffer.flip();
-                            _recordingMgr.processInput(buffer);
-                            buffer.clear();
-                        }
-                    }
-                } catch(Exception e) {
-                } finally {
-                }
+							return;
+						}
+						while (_clientReadQ.size() > 0) {
+							ReaderThreadOperation oper = _clientReadQ.take();
+							if (oper.equals(ReaderThreadOperation.START)) {
+								enabled = true;
+							} else if (oper.equals(ReaderThreadOperation.STOP)) {
+								enabled = false;
+							} else {
+								return;
+							}
+						}
+						for(int i = 0; i < numRead; i++) {
+							buffer.put((byte) data[i]);
+						}
+						if (enabled) {
+							buffer.flip();
+							_recordingMgr.processInput(buffer);
+							buffer.clear();
+						}
+					} catch(Exception e) {
+						e.printStackTrace();
+					} finally {
+					}
+				}
             }
         }, "SSHServerClient_" + _id); // TODO:
  	}

@@ -2,17 +2,23 @@ package com.grb.insidious.tl1;
 
 import java.nio.ByteBuffer;
 import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 import com.grb.insidious.Protocol;
 import com.grb.insidious.recording.Recording;
 import com.grb.insidious.recording.RecordingElement;
 import com.grb.tl1.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by gbromfie on 10/17/16.
  */
 public class TL1RecordingManager {
+    final Logger logger = LoggerFactory.getLogger(TL1RecordingManager.class);
+    final static public SimpleDateFormat DateFormatter = new SimpleDateFormat("HH:mm:ss");
+
     class TL1RecordingTimerTask extends TimerTask {
         public OutputElement _element;
         public String _ctag;
@@ -37,7 +43,9 @@ public class TL1RecordingManager {
         public void run() {
             // send _element.tl1OutputMsg
         	updateTag(_element.tl1OutputMsg);
-        	_listener.onTL1Output(_element.tl1OutputMsg);
+            for(int i = 0; i < _element.multiplicity; i++) {
+                _listener.onTL1Output(_element.tl1OutputMsg);
+            }
             Long currentTS = _element.timestamp;
             while(_element.next != null) {
                 _element = _element.next;
@@ -45,7 +53,9 @@ public class TL1RecordingManager {
                         ((_element.timestamp - currentTS) == 0)) {
                     // send _element.tl1OutputMsg
                 	updateTag(_element.tl1OutputMsg);
-                	_listener.onTL1Output(_element.tl1OutputMsg);
+                    for(int i = 0; i < _element.multiplicity; i++) {
+                        _listener.onTL1Output(_element.tl1OutputMsg);
+                    }
                 } else {
                     _timer.schedule(new TL1RecordingTimerTask(_element, _ctag), _element.timestamp - currentTS);
                     break;
@@ -55,38 +65,28 @@ public class TL1RecordingManager {
     }
 
     private String _sessionName;
-    private HashMap<String, HashMap<String, HashMap<String, InputElement>>> _commandMap;
-    private HashMap<String, HashMap<String, InputElement>> _outstandingCommandMap;
-    private HashMap<String, Object> _lastElementMap;
+    private CommandDB _commandDB;
     private Timer _timer;
 	private TL1AgentDecoder _agentDecoder;
 	private TL1ManagerDecoder _managerDecoder;
 	private TL1RecordingListener _listener;
-	private String _blankTID;
 
     public TL1RecordingManager(String sessionName, TL1RecordingListener listener) {
     	_sessionName = sessionName;
     	_listener = listener;
-    	_commandMap = new HashMap<String, HashMap<String, HashMap<String, InputElement>>>();
-    	_outstandingCommandMap = new HashMap<String, HashMap<String, InputElement>>();
-        _lastElementMap = new HashMap<String, Object>();
+        _commandDB = new CommandDB();
     	_timer = new Timer("TL1RecordingManager_" + _sessionName, true);
     	_agentDecoder = new TL1AgentDecoder();
     	_managerDecoder = new TL1ManagerDecoder();
-        _blankTID = null;
     }
 
     public void close() {
-        _commandMap.clear();
-        _outstandingCommandMap.clear();
-        _lastElementMap.clear();
+        _commandDB.reset();
         _timer.cancel();
     }
 
     public void setRecording(Recording recording) throws TL1MessageMaxSizeExceededException, ParseException {
-    	_commandMap.clear();
-    	_outstandingCommandMap.clear();
-        _lastElementMap.clear();
+        _commandDB.reset();
     	_timer.cancel();
     	_timer = new Timer("TL1RecordingManager_" + _sessionName, true);
 		if (recording.elements != null) {
@@ -96,19 +96,29 @@ public class TL1RecordingManager {
 					if (element.input != null) {
 						ByteBuffer buffer = ByteBuffer.wrap(element.input.getBytes());
 						TL1InputMessage tl1Request = (TL1InputMessage) _managerDecoder.decodeTL1Message(buffer);
-						addInput(tl1Request, element.timestamp.getTime());
+                        int multiplicity = 1;
+                        if (element.multiplicity != null) {
+                            multiplicity = element.multiplicity;
+                        }
+						addInput(tl1Request, element.timestamp.getTime(), multiplicity);
 					}
 					if (element.output != null) {
 						if (_agentDecoder == null) {
 							_agentDecoder = new TL1AgentDecoder();
 						}
 						ByteBuffer buffer = ByteBuffer.wrap(element.output.getBytes());
-						TL1OutputMessage tl1Output = (TL1OutputMessage)_agentDecoder.decodeTL1Message(buffer);
-						int multitplicity = 1;
-						if (element.multiplicity != null) {
-							multitplicity = element.multiplicity; 
-						}
-						addOutput(tl1Output, element.timestamp.getTime());
+                        while(buffer.hasRemaining()) {
+                            TL1OutputMessage tl1Output = (TL1OutputMessage)_agentDecoder.decodeTL1Message(buffer);
+                            if (tl1Output == null) {
+                                // error
+                            } else {
+                                int multiplicity = 1;
+                                if (element.multiplicity != null) {
+                                    multiplicity = element.multiplicity;
+                                }
+                                addOutput(tl1Output, element.timestamp.getTime(), multiplicity);
+                            }
+                        }
 					}
 					if (element.tcpserver != null) {
 						
@@ -116,148 +126,33 @@ public class TL1RecordingManager {
 				}
 			}
 		}
+        System.out.println(_commandDB);
     }
         
     /**
      * For going from json to internal structure
      */
-    public void addInput(TL1InputMessage input, Long timestamp) {
+    public void addInput(TL1InputMessage input, Long timestamp, int multiplicity) {
         InputElement newElement = new InputElement();
         newElement.timestamp = timestamp;
         newElement.tl1InputMsg = input;
-        newElement.processed = false;
+        newElement.multiplicity = multiplicity;
+        newElement.left = multiplicity;
         newElement.output = null;
         newElement.next = null;
-
-        HashMap<String, HashMap<String, InputElement>> cmdCodeMap = _commandMap.get(input.getTid());
-        if (cmdCodeMap == null) {
-            cmdCodeMap = new HashMap<String, HashMap<String, InputElement>>();
-            _commandMap.put(input.getTid(), cmdCodeMap);
-        }
-        HashMap<String, InputElement> aidMap = cmdCodeMap.get(input.getCmdCode().toUpperCase());
-        if (aidMap == null) {
-            aidMap = new HashMap<String, InputElement>();
-            cmdCodeMap.put(input.getCmdCode().toUpperCase(), aidMap);
-        }
-        InputElement element = aidMap.get(input.getAid());
-        if (element == null) {
-            aidMap.put(input.getAid(), newElement);
-        } else {
-            element.appendInput(newElement);
-        }
-        if ((input.getTid().isEmpty()) && (_blankTID != null)) {
-            setLastElementAdded(_blankTID, newElement);
-        } else {
-            setLastElementAdded(input.getTid(), newElement);
-        }
-
-        HashMap<String, InputElement> ctagMap = _outstandingCommandMap.get(input.getTid());
-        if (ctagMap == null) {
-            ctagMap = new HashMap<String, InputElement>();
-            _outstandingCommandMap.put(input.getTid(), ctagMap);
-        }
-        ctagMap.put(input.getCTAG(), newElement);
+        _commandDB.add(newElement);
     }
 
     /**
      * For going from json to internal structure
      */
-    public void addOutput(TL1OutputMessage outputMsg, Long timestamp) {
+    public void addOutput(TL1OutputMessage outputMsg, Long timestamp, int multiplicity) {
         OutputElement newElement = new OutputElement();
         newElement.tl1OutputMsg = outputMsg;
         newElement.next = null;
         newElement.timestamp = timestamp;
-        if (outputMsg instanceof TL1AckMessage) {
-            TL1AckMessage ack = (TL1AckMessage)outputMsg;
-            // no tid so loop through the tids
-            InputElement matchElement = null;
-            Iterator<HashMap<String, InputElement>> it = _outstandingCommandMap.values().iterator();
-            while(it.hasNext()) {
-                HashMap<String, InputElement> element = it.next();
-                matchElement = element.get(ack.getCTAG());
-                if (matchElement != null) {
-                    if(!matchElement.hasResponse()) {
-                        break;
-                    }
-                }
-            }
-            if (matchElement == null) {
-                // missing request for ack
-            } else {
-                matchElement.appendOutput(newElement);
-                setLastElementAdded(matchElement.tl1InputMsg.getTid(), newElement);
-            }
-        } else if (outputMsg instanceof TL1ResponseMessage) {
-            boolean processingBlankTID = false;
-            TL1ResponseMessage resp = (TL1ResponseMessage)outputMsg;
-            HashMap<String, InputElement> ctagMap = _outstandingCommandMap.get(resp.getTid());
-            if ((ctagMap == null) || (ctagMap.isEmpty())) {
-                // check for the blank tid requests
-                if ((_blankTID == null) || (_blankTID.equals(resp.getTid()))){
-                    ctagMap = _outstandingCommandMap.get("");
-                    processingBlankTID = true;
-                }
-            }
-            if ((ctagMap == null) || (ctagMap.isEmpty())) {
-                // not found
-            } else {
-                InputElement element = ctagMap.get(resp.getCTAG());
-                if (element == null) {
-                    // missing request for response
-                } else {
-                    if (processingBlankTID) {
-                        _blankTID = resp.getTid();
-                    }
-                    element.appendOutput(newElement);
-                    setLastElementAdded(resp.getTid(), newElement);
-                    ctagMap.remove(resp.getCTAG());
-                }
-            }
-        } else if (outputMsg instanceof TL1AOMessage) {
-            TL1AOMessage ao = (TL1AOMessage)outputMsg;
-            Object lastElementAdded = getLastElementAdded(ao.getTid());
-            if (lastElementAdded == null) {
-                // check for the blank tid
-                lastElementAdded = getLastElementAdded("");
-            }
-            if (lastElementAdded == null) {
-                // no request or response to tie to
-            } else {
-                if(lastElementAdded instanceof InputElement) {
-                    InputElement element = (InputElement)lastElementAdded;
-                    element.appendOutput(newElement);
-                } else {
-                    OutputElement element = (OutputElement)lastElementAdded;
-                    element.next = newElement;
-                }
-                setLastElementAdded(ao.getTid(), newElement);
-            }
-        }
-    }
-
-    public InputElement getUnprocessedInputElement(TL1InputMessage input) {
-        InputElement element = getUnprocessedInputElement(input.getTid(), input);
-        if ((element == null) && (input.getTid().isEmpty()) && (_blankTID != null)) {
-            return getUnprocessedInputElement(_blankTID, input);
-        } else if ((element == null) && (input.getTid().equals(_blankTID))) {
-            return getUnprocessedInputElement("", input);
-        }
-        return element;
-    }
-
-    public InputElement getUnprocessedInputElement(String tidToUse, TL1InputMessage input) {
-        HashMap<String, HashMap<String, InputElement>> cmdCodeMap = _commandMap.get(tidToUse);
-        if(cmdCodeMap != null) {
-            HashMap<String, InputElement> aidMap = cmdCodeMap.get(input.getCmdCode().toUpperCase());
-            if(aidMap != null) {
-                InputElement element = aidMap.get(input.getAid());
-                while((element != null) && (element.processed)) {
-                    element = element.next;
-                }
-                return element;
-            }
-        }
-        return null;
+        newElement.multiplicity = multiplicity;
+        _commandDB.add(newElement);
     }
 
     public void processInput(ByteBuffer readBuffer) throws TL1MessageMaxSizeExceededException, ParseException {
@@ -266,25 +161,52 @@ public class TL1RecordingManager {
     		processInput(inputMsg);
     	}
     }
-    
+
     public void processInput(TL1InputMessage input) {
-        InputElement inElement = getUnprocessedInputElement(input);
-        inElement.processed = true;
-        OutputElement outElement = inElement.output;
-        if ((inElement.timestamp == null) || (outElement.timestamp == null) ||
-                ((outElement.timestamp - inElement.timestamp) <= 0)) {
-            _timer.schedule(new TL1RecordingTimerTask(outElement, input.getCTAG()), 0);
-        } else {
-            _timer.schedule(new TL1RecordingTimerTask(outElement, input.getCTAG()), outElement.timestamp - inElement.timestamp);
+        if (logger.isInfoEnabled()) {
+            logger.info(String.format("Received TL1 command: \"%s\"", input.toString()));
         }
-    }
-
-    private Object getLastElementAdded(String tid) {
-        return _lastElementMap.get(tid);
-    }
-
-    private void setLastElementAdded(String tid, Object element) {
-        _lastElementMap.put(tid, element);
+        InputElement inElement;
+        try {
+            inElement = _commandDB.getInputElement(input);
+            if (logger.isInfoEnabled()) {
+                logger.info(String.format("Matched command %s in database for TL1 command: \"%s\"",
+                        inElement.toString().trim(), input.toString()));
+            }
+            OutputElement outElement = inElement.output;
+            if (outElement == null) {
+                throw new InputElementNotFoundException(input, _commandDB.resolveTID(input.getTid()),
+                        InputElementNotFoundReason.NO_OUTPUTS, null);
+            } else {
+                if ((inElement.timestamp == null) || (outElement.timestamp == null) ||
+                        ((outElement.timestamp - inElement.timestamp) <= 0)) {
+                    _timer.schedule(new TL1RecordingTimerTask(outElement, input.getCTAG()), 0);
+                } else {
+                    _timer.schedule(new TL1RecordingTimerTask(outElement, input.getCTAG()), outElement.timestamp - inElement.timestamp);
+                }
+            }
+        } catch (InputElementNotFoundException e) {
+            if (logger.isErrorEnabled()) {
+                logger.error(String.format("Failed to get output for command -> %s", e.toString()));
+            }
+            String tl1Resp = null;
+            try {
+                tl1Resp = String.format(
+                        "\r\n\n   \"%s\" 16-01-01 00:00:00\r\nM  %s DENY\r\n   ICNV\r\n   /* %s */\r\n;",
+                        e.getTID(), e.getInput().getCTAG(), e.getReason().toString());
+                OutputElement outputElement = new OutputElement();
+                outputElement.multiplicity = 1;
+                outputElement.timestamp = null;
+                outputElement.next = null;
+                outputElement.tl1OutputMsg = (TL1OutputMessage)_agentDecoder.decodeTL1Message(ByteBuffer.wrap(tl1Resp.getBytes()));
+                _timer.schedule(new TL1RecordingTimerTask(outputElement, e.getInput().getCTAG()), 0);
+            } catch(Exception e1) {
+                if (logger.isErrorEnabled()) {
+                    logger.error(String.format("Failed to send error response %s for command -> %s - %s",
+                            tl1Resp, input.toString(), e1.getMessage()));
+                }
+            }
+        }
     }
 
     // TODO: NEED TO UPDATE ATAG ON OUTGOING
@@ -306,28 +228,28 @@ public class TL1RecordingManager {
             byte[] ao1 = "\r\n\n   BLUB 93-06-02 12:00:00\r\n** 1 REPT PM T1\r\n   \"AID-T1-1:CVL,50\"\r\n   \"AID-T1-2:CVL,10\"\r\n   \"AID-T1-n:CVL,22\"\r\n;".getBytes();
             TL1InputMessage input1 = (TL1InputMessage)mgrdecoder.decodeTL1Message(ByteBuffer.wrap(actuser1));
             long now = new Date().getTime();
-            test.addInput(input1, now);
+            test.addInput(input1, now, 1);
             TL1OutputMessage output1 = (TL1OutputMessage)agtdecoder.decodeTL1Message(ByteBuffer.wrap(actuserip1));
-            test.addOutput(output1, now + 5000);
+            test.addOutput(output1, now + 5000, 1);
             output1 = (TL1OutputMessage)agtdecoder.decodeTL1Message(ByteBuffer.wrap(actuserresp1));
-            test.addOutput(output1, now + 10000);
+            test.addOutput(output1, now + 10000, 1);
             output1 = (TL1OutputMessage)agtdecoder.decodeTL1Message(ByteBuffer.wrap(ao1));
-            test.addOutput(output1, now + 12000);
+            test.addOutput(output1, now + 12000, 1);
 
             byte[] actuser2 = "ACT-USER:GAGA:ADMIN:0002::ADMIN;".getBytes();
             byte[] actuserip2 = "IP 0002\r\n<".getBytes();
             byte[] actuserresp2 = "\r\n\n   GAGA 85-10-09 22:05:12\r\nM  0002 DENY\r\n;".getBytes();
             TL1InputMessage input2 = (TL1InputMessage)mgrdecoder.decodeTL1Message(ByteBuffer.wrap(actuser2));
-            test.addInput(input2, now);
-            test.addOutput(output1, now + 2000);
+            test.addInput(input2, now, 1);
+            test.addOutput(output1, now + 2000, 1);
             TL1OutputMessage output2 = (TL1OutputMessage)agtdecoder.decodeTL1Message(ByteBuffer.wrap(actuserip2));
-            test.addOutput(output2, now + 5000);
-            test.addOutput(output1, null);
-            test.addOutput(output2, now + 10000);
-            test.addOutput(output2, now + 15000);
-            test.addOutput(output1, now + 17000);
+            test.addOutput(output2, now + 5000, 1);
+            test.addOutput(output1, null, 1);
+            test.addOutput(output2, now + 10000, 1);
+            test.addOutput(output2, now + 15000, 1);
+            test.addOutput(output1, now + 17000, 1);
             output2 = (TL1OutputMessage)agtdecoder.decodeTL1Message(ByteBuffer.wrap(actuserresp2));
-            test.addOutput(output2, null);
+            test.addOutput(output2, null, 1);
 
             test.processInput(input1);
             for(int i = 0; i < 15; i++) {
