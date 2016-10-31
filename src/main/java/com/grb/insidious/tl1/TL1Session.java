@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.text.ParseException;
@@ -82,8 +83,12 @@ public class TL1Session implements Session, TL1RecordingListener, SSHServerClien
 
 	@Override
 	public void start() throws IOException {
-		_sshServer = new SSHServer(_id, _port, "keys/host.ser", this);
-		_sshServer.start();
+		_sshServer = new SSHServer(_id, _port, this);
+		try {
+			_sshServer.start();
+		} catch (URISyntaxException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override

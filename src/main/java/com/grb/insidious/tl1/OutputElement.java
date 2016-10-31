@@ -1,9 +1,6 @@
 package com.grb.insidious.tl1;
 
-import com.grb.tl1.TL1AOMessage;
-import com.grb.tl1.TL1AckMessage;
-import com.grb.tl1.TL1OutputMessage;
-import com.grb.tl1.TL1ResponseMessage;
+import com.grb.tl1.*;
 
 import java.util.Date;
 
@@ -27,7 +24,11 @@ public class OutputElement {
             tl1Abbrev = String.format("%s...", ack.getAckCode());
         } else {
             TL1ResponseMessage resp = (TL1ResponseMessage)tl1OutputMsg;
-            tl1Abbrev = String.format("%s:%s...", resp.getTid(), resp.getComplCode());
+            if (resp.getResponseType().equals(TL1ResponseType.CONTINUATION)) {
+                tl1Abbrev = String.format("%s:%s>...", resp.getTid(), resp.getComplCode());
+            } else {
+                tl1Abbrev = String.format("%s:%s...", resp.getTid(), resp.getComplCode());
+            }
         }
         return String.format("\"%s\" %s mult=%d", tl1Abbrev,
                 TL1RecordingManager.DateFormatter.format(new Date(timestamp)),
