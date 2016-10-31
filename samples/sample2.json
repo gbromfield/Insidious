@@ -10,16 +10,22 @@
   "timestamp": "2016-10-19 14:17:29,676",
   "output": "\r\n\n   \"PV0414E\" 16-10-19 14:19:37\r\nM  10001 COMPLD\r\n;"
 },
-{
+  {
+    "protocol": "tl1",
+    "timestamp": "2016-10-19 14:17:29,676",
+    "input": "RTRV-HDR:\"PV0414E\"::43;",
+    "multiplicity": "1000000"
+  },
+  {
+    "protocol": "tl1",
+    "timestamp": "2016-10-19 14:17:29,676",
+    "output": "\r\n\n   \"PV0414E\" 16-10-19 14:19:37\r\nM  43 COMPLD\r\n;"
+  },
+  {
   "protocol": "tl1",
   "timestamp": "2016-10-19 14:17:32,135",
   "input": "RTRV-NETYPE:PV0414E::2;"
 },
-  {
-    "protocol": "tl1",
-    "timestamp": "2016-10-19 14:17:35,372",
-    "output": "\r\n\n   \"PV0414E\" 15-12-09 06:01:41\r\n*C  1 REPT ALM EQPT\r\n   \"40GMUX-1-10:CL,EQPT_MISSING,SA,11-26,14-14-33,NEND,NA:\\\"Circuit Pack Missing\\\",NONE:0100000045-0062-0035,:YEAR=2015,MODE=NONE\"\r\n;"
-  },
 {
   "protocol": "tl1",
   "timestamp": "2016-10-19 14:17:38,372",
@@ -138,12 +144,12 @@
 {
   "protocol": "tl1",
   "timestamp": "2016-10-19 14:20:11,465",
-  "input": "RTRV-INVENTORY:PV0414E:ALL:14;"
+  "input": "RTRV-INVENTORY:PV0414E:ALL:140;"
 },
 {
   "protocol": "tl1",
   "timestamp": "2016-10-19 14:20:11,832",
-  "output": "\r\n\n   \"PV0414E\" 16-10-19 14:20:11\r\nM  14 COMPLD\r\n   \"AP-0-1::CTYPE=\\\"Access Panel, Converged (SONET)\\\",PEC=NTK505MB,REL=    ,CLEI=SIMAP,SER=,MDAT=UNKNOWN\"\r\n   \"SAM-0-1::CTYPE=\\\"SAM C-Band w/OSC 1xSFP 10/100 BT WSC\\\",PEC=NTK552JN,REL= 02A,CLEI=CLEI_8161,SER=NNTMLIM00001,MDAT=0-51,CARDPWR=FULL,AGE=00-003-05-48,ONSC=00-000-01-02\"\r\n   \"EMPTY-0-1-2::\"\r\n   \"XLA-0-2::CTYPE=\\\"XLA C-Band\\\",PEC=NTK552KA,REL= 02A,CLEI=CLEI_8162,SER=NNTMLIM00001,MDAT=0-51,CARDPWR=FULL,AGE=00-003-05-47,ONSC=00-000-01-02\"\r\n   \"EMPTY-0-3::\"\r\n   \"SAM-0-4::CTYPE=\\\"SAM C-Band w/OSC 1xSFP 10/100 BT WSC\\\",PEC=NTK552JN,REL= 02A,CLEI=CLEI_8164,SER=NNTMLIM00001,MDAT=0-51,CARDPWR=FULL,AGE=00-003-05-49,ONSC=00-000-01-02\"\r\n   \"EMPTY-0-4-2::\"\r\n   \"EMPTY-0-5::\"\r\n   \"EMPTY-0-6::\"\r\n   \"EMPTY-0-7::\"\r\n   \"EMPTY-0-8::\"\r\n>\r\n\n   \"PV0414E\" 16-10-19 14:20:11\r\nM  14 COMPLD\r\n   \"EMPTY-0-9::\"\r\n   \"EMPTY-0-10::\"\r\n   \"EMPTY-0-11::\"\r\n   \"EMPTY-0-12::\"\r\n   \"EMPTY-0-13::\"\r\n   \"EMPTY-0-14::\"\r\n   \"SP-0-15::CTYPE=\\\"SP-2\\\",PEC=NTK555EA,REL= 1  ,CLEI=,SER=NNTM,MDAT=UNKNOWN,AGE=00-120-11-31,ONSC=00-120-11-31\"\r\n   \"EMPTY-0-16::\"\r\n   \"PWR-0-17-1::CTYPE=\\\"Power Card 60A breakerless\\\",PEC=NTK505DA,REL=    ,CLEI=SIMPWR60A,SER=,MDAT=UNKNOWN\"\r\n   \"MIC-0-17-2::CTYPE=\\\"MIC (Maintenance Interface Card)\\\",PEC=NTK505FA,REL=    ,CLEI=,SER=,MDAT=UNKNOWN\"\r\n   \"PWR-0-17-3::CTYPE=\\\"Power Card 60A breakerless\\\",PEC=NTK505DA,REL=    ,CLEI=SIMPWR60A,SER=,MDAT=UNKNOWN\"\r\n>\r\n\n   \"PV0414E\" 16-10-19 14:20:11\r\nM  14 COMPLD\r\n   \"EMPTY-0-83::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-84::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-85::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-86::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-87::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-88::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-89::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-90::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-91::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-92::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-93::STYPE=\\\"Virtual\\\"\"\r\n>\r\n\n   \"PV0414E\" 16-10-19 14:20:11\r\nM  14 COMPLD\r\n   \"EMPTY-0-94::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-95::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-96::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-97::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-98::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-99::STYPE=\\\"Virtual\\\"\"\r\n;"
+  "output": "\r\n\n   \"PV0414E\" 16-10-19 14:20:11\r\nM  140 COMPLD\r\n   \"AP-0-1::CTYPE=\\\"Access Panel, Converged (SONET)\\\",PEC=NTK505MB,REL=    ,CLEI=SIMAP,SER=,MDAT=UNKNOWN\"\r\n   \"SAM-0-1::CTYPE=\\\"SAM C-Band w/OSC 1xSFP 10/100 BT WSC\\\",PEC=NTK552JN,REL= 02A,CLEI=CLEI_8161,SER=NNTMLIM00001,MDAT=0-51,CARDPWR=FULL,AGE=00-003-05-48,ONSC=00-000-01-02\"\r\n   \"EMPTY-0-1-2::\"\r\n   \"XLA-0-2::CTYPE=\\\"XLA C-Band\\\",PEC=NTK552KA,REL= 02A,CLEI=CLEI_8162,SER=NNTMLIM00001,MDAT=0-51,CARDPWR=FULL,AGE=00-003-05-47,ONSC=00-000-01-02\"\r\n   \"EMPTY-0-3::\"\r\n   \"SAM-0-4::CTYPE=\\\"SAM C-Band w/OSC 1xSFP 10/100 BT WSC\\\",PEC=NTK552JN,REL= 02A,CLEI=CLEI_8164,SER=NNTMLIM00001,MDAT=0-51,CARDPWR=FULL,AGE=00-003-05-49,ONSC=00-000-01-02\"\r\n   \"EMPTY-0-4-2::\"\r\n   \"EMPTY-0-5::\"\r\n   \"EMPTY-0-6::\"\r\n   \"EMPTY-0-7::\"\r\n   \"EMPTY-0-8::\"\r\n>\r\n\n   \"PV0414E\" 16-10-19 14:20:11\r\nM  140 COMPLD\r\n   \"EMPTY-0-9::\"\r\n   \"EMPTY-0-10::\"\r\n   \"EMPTY-0-11::\"\r\n   \"EMPTY-0-12::\"\r\n   \"EMPTY-0-13::\"\r\n   \"EMPTY-0-14::\"\r\n   \"SP-0-15::CTYPE=\\\"SP-2\\\",PEC=NTK555EA,REL= 1  ,CLEI=,SER=NNTM,MDAT=UNKNOWN,AGE=00-120-11-31,ONSC=00-120-11-31\"\r\n   \"EMPTY-0-16::\"\r\n   \"PWR-0-17-1::CTYPE=\\\"Power Card 60A breakerless\\\",PEC=NTK505DA,REL=    ,CLEI=SIMPWR60A,SER=,MDAT=UNKNOWN\"\r\n   \"MIC-0-17-2::CTYPE=\\\"MIC (Maintenance Interface Card)\\\",PEC=NTK505FA,REL=    ,CLEI=,SER=,MDAT=UNKNOWN\"\r\n   \"PWR-0-17-3::CTYPE=\\\"Power Card 60A breakerless\\\",PEC=NTK505DA,REL=    ,CLEI=SIMPWR60A,SER=,MDAT=UNKNOWN\"\r\n>\r\n\n   \"PV0414E\" 16-10-19 14:20:11\r\nM  140 COMPLD\r\n   \"EMPTY-0-83::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-84::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-85::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-86::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-87::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-88::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-89::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-90::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-91::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-92::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-93::STYPE=\\\"Virtual\\\"\"\r\n>\r\n\n   \"PV0414E\" 16-10-19 14:20:11\r\nM  140 COMPLD\r\n   \"EMPTY-0-94::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-95::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-96::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-97::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-98::STYPE=\\\"Virtual\\\"\"\r\n   \"EMPTY-0-99::STYPE=\\\"Virtual\\\"\"\r\n;"
 },
 {
   "protocol": "tl1",

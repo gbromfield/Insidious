@@ -3,6 +3,8 @@ package com.grb.insidious.tl1;
 import com.grb.tl1.TL1InputMessage;
 import com.grb.tl1.TL1ResponseMessage;
 
+import java.util.Date;
+
 /**
  * Created by gbromfie on 10/17/16.
  */
@@ -10,7 +12,8 @@ public class InputElement {
     public Long timestamp;
     public TL1InputMessage tl1InputMsg;
     public OutputElement output;
-    public boolean processed;
+    public int multiplicity;
+    public int left;
     public InputElement next;
 
     public boolean hasResponse() {
@@ -46,5 +49,26 @@ public class InputElement {
             }
             outputElem.next = element;
         }
+    }
+
+    @Override
+    public String toString() {
+        int numLinked = 0;
+        InputElement linked = next;
+        while(linked != null) {
+            numLinked++;
+            linked = linked.next;
+        }
+        StringBuilder bldr = new StringBuilder();
+        bldr.append(String.format("    \"%s:%s:%s...\" %s mult=%d left=%d linked=%d\n", tl1InputMsg.getCmdCode(),
+                tl1InputMsg.getTid(), tl1InputMsg.getAid(),
+                TL1RecordingManager.DateFormatter.format(new Date(timestamp)),
+                multiplicity, left, numLinked));
+        OutputElement outputElement = output;
+        while(outputElement != null) {
+            bldr.append(String.format("        %s\n", outputElement));
+            outputElement = outputElement.next;
+        }
+        return bldr.toString();
     }
 }

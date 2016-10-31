@@ -117,6 +117,7 @@ public class Insidious {
 			}
 			return session;
 		} catch(Exception e) {
+			e.printStackTrace();
 			return null;
 		}
 	}
