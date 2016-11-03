@@ -1,10 +1,7 @@
 package com.grb.insidious;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URL;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -12,11 +9,11 @@ import java.util.concurrent.CountDownLatch;
 
 import com.ciena.logx.LogX;
 import com.ciena.logx.logfile.ra.insidious.InsidiousOutputContext;
-import com.ciena.logx.logfile.ra.insidious.logrecord.TL1LogRecordParser;
-import com.ciena.logx.util.ExtensionFilter;
 import com.grb.insidious.recording.Recording;
 import com.grb.insidious.tl1.TL1Session;
 
+import com.grb.tl1.TL1AgentDecoder;
+import com.grb.tl1.TL1Message;
 import spark.Request;
 import spark.Response;
 import spark.Route;
@@ -85,6 +82,107 @@ public class Insidious {
 		});
 	}
 
+	static public void startInteractive() {
+		final int BufferSize = 100000;
+		byte[] indata = new byte[BufferSize];
+		int ch;
+		int index = 0;
+		boolean found = false;
+		boolean backslash = false;
+		Boolean serialize = true;
+		System.out.println("Entering interctive mode\n");
+		TL1AgentDecoder decoder = new TL1AgentDecoder();
+		try {
+			while(true) {
+				ch = System.in.read();
+				if (index == 0) {
+					serialize = (ch != 92); // \
+				}
+				if (ch == -1) {
+					System.exit(1);
+				} else if (ch == 10) {	// LF
+					backslash = false;
+					if ((index == 0) || ((index > 0) && (indata[index - 1] != 13) && (indata[index - 1] != 10))) {
+						indata[index++] = 13;
+					}
+					indata[index++] = 10;
+				} else if (ch == 59) {	// ;
+					backslash = false;
+					if ((index > 1) && (indata[index - 2] == 13) && (indata[index - 1] == 10)) {
+						found = true;
+					}
+					indata[index++] = (byte)ch;
+				} else if (ch == 60) {	// <
+					backslash = false;
+					if ((index > 1) && (indata[index - 2] == 13) && (indata[index - 1] == 10)) {
+						found = true;
+					}
+					indata[index++] = (byte)ch;
+				} else if (ch == 62) {	// >
+					backslash = false;
+					if ((index > 1) && (indata[index - 2] == 13) && (indata[index - 1] == 10)) {
+						found = true;
+					}
+					indata[index++] = (byte)ch;
+				} else if ((ch == 114) && (!serialize)) {	// r
+					backslash = false;
+					if ((index > 0) && (indata[index - 1] == 92)) {
+						indata[index - 1] = 13;
+					} else {
+						indata[index++] = (byte)ch;
+					}
+				} else if ((ch == 110) && (!serialize)) {	// n
+					backslash = false;
+					if ((index > 0) && (indata[index - 1] == 92)) {
+						indata[index - 1] = 10;
+					} else {
+						indata[index++] = (byte)ch;
+					}
+				} else if ((ch == 34) && (!serialize)) {	// "
+					backslash = false;
+					if ((index > 0) && (indata[index - 1] == 92)) {
+						indata[index - 1] = 34;
+					} else {
+						indata[index++] = (byte)ch;
+					}
+				} else if ((ch == 92) && (!serialize)) {	// \
+					if ((index > 0) && (indata[index - 1] == 92)) {
+						if (backslash) {
+							indata[index++] = (byte)ch;
+							backslash = false;
+						} else {
+							backslash = true;
+						}
+					} else {
+						indata[index++] = (byte)ch;
+						backslash = false;
+					}
+				} else {
+					backslash = false;
+					indata[index++] = (byte)ch;
+				}
+				if (found) {
+					if (serialize) {
+						ByteBuffer buffer = ByteBuffer.wrap(indata, 0, index);
+						buffer.flip();
+						TL1Message tl1Msg = decoder.decodeTL1Message(buffer);
+						if (tl1Msg != null) {
+							System.out.println("NOT FOUND");
+						} else {
+							System.out.println(transliterateCRLF(new String(indata, 0, index)));
+						}
+					} else {
+						System.out.println(new String(indata, 0, index));
+					}
+					found = false;
+					index = 0;
+				}
+			}
+		} catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+
 	public Recording createRecording() {
 		/*
 		ArrayList<String> inputFiles = new ArrayList<String>();
@@ -126,61 +224,70 @@ public class Insidious {
 		return String.format("{\"protocol\": \"%s\", \"id\": \"%s\", \"port\": \"%d\", \"client\": \"%s\", \"source\": \"%s\"}",
 				session.getProtocol().toString().toLowerCase(), session.getId(), session.getPort(), session.getClient(), session.getSource());
 	}
-	
-	public static void printSyntax() {
-		System.out.println(";syntax: Insidious -f recording");
-	}
-	
-	public static void main(String[] args) {
-	    try {
-			ArrayList<String> inputFiles = new ArrayList<String>();
-			boolean processingInputFiles = false;
-			String extension = null;
-			ExtensionFilter filter = null;
-			String recordingFilename = null;
 
-			int i = 0;
-			while(i < args.length) {
-				if (args[i].equalsIgnoreCase("-i")) {
-					processingInputFiles = true;
-				} else if (args[i].equalsIgnoreCase("-e")) {
-					processingInputFiles = false;
-					i++;
-					filter = new ExtensionFilter(args[i]);
-				} else if (args[i].equalsIgnoreCase("-c")) {
-					i++;
-					recordingFilename = args[i];
-				} else if (args[i].startsWith("-")) {
-					processingInputFiles = false;
-				} else if (processingInputFiles) {
-					inputFiles.add(args[i]);
-				} else {
-					// ignore might be a parser argument
+	public static String transliterateCRLF(String input) {
+		char[] inputChars = input.toCharArray();
+		StringBuilder bldr = new StringBuilder();
+		for(int i = 0; i < inputChars.length; i++) {
+			if (inputChars[i] == '\r') {
+				bldr.append("\\r");
+			} else if (inputChars[i] == '\n') {
+				if (i > 0) {
+					bldr.append("\\n");
 				}
-				i++;
+			} else if (inputChars[i] == '"') {
+				bldr.append("\\\"");
+			} else if (inputChars[i] == '\\') {
+				bldr.append("\\\\");
+			} else {
+				bldr.append(inputChars[i]);
 			}
+		}
+		return bldr.toString();
+	}
 
-			if (inputFiles.size() == 0) {
-				Insidious ins = new Insidious();
-				ins.startREST();
+	public static void main(String[] args) {
+		InsidiousCommandLineProcessor clp = new InsidiousCommandLineProcessor();
+		InsidiousProperties props = (InsidiousProperties)clp.parse(args);
+
+		if (props.getUnknownArg() != null) {
+			System.out.println(String.format("Unknown argument: \"%s\"", props.getUnknownArg()));
+			System.out.println("Syntax:");
+			System.out.println(clp.getSyntax());
+			System.exit(0);
+		}
+
+		if (props.printHelp()) {
+			System.out.println("Syntax:");
+			System.out.println(clp.getSyntax());
+			System.exit(0);
+		}
+
+		if (props.getInteractive()) {
+			startInteractive();
+			System.exit(0);
+		}
+
+		if ((props.getInputFilenames() == null) || (props.getInputFilenames().size() == 0)) {
+			Insidious ins = new Insidious();
+			ins.startREST();
+			try {
 				ExitLatch.await();
-				System.exit(1);
+			} catch (InterruptedException e1) {
+				e1.printStackTrace();
 			}
+			System.exit(0);
+		}
 
-//	    	TL1Session tl1Session = new TL1Session("session1", 0);
-            ArrayList<File>  inputFileList = LogX.processFilenames(inputFiles, null);
-	        InsidiousOutputContext ctx = new InsidiousOutputContext(new String[] {"-tl1", "-cap", recordingFilename});
-            LogX logx = new LogX(inputFileList, ctx);
-            logx.run();
-            System.out.println(ctx.toString());
-//	    	Recording recording = Recording.parseString(ctx.toString());
-//	    	tl1Session.setRecording("", recording);
-//			Recording recording = Recording.parseFile(args[1]);
-
-            System.exit(0);
-	    } catch(Exception e ) {
-	    	e.printStackTrace();
-		} finally {
-	    }
+		InsidiousOutputContext ctx = null;
+		try {
+			ctx = new InsidiousOutputContext(props);
+			LogX logx = new LogX(props);
+			logx.run();
+			System.out.println(ctx.logItemsToString());
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		System.exit(0);
 	}
 }
