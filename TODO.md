@@ -9,3 +9,4 @@
 7. <s>Refactor input arguments.</s>
 8. Implement Disconnects
 9. Support response continuations in interactive mode
+10. Scaleability - 2 threads are created per connection. Only 1 or a small number of connections required so not currently a problem.

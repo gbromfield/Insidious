@@ -1,8 +1,6 @@
 package com.grb.insidious;
 
-import java.io.File;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.CountDownLatch;
@@ -10,7 +8,7 @@ import java.util.concurrent.CountDownLatch;
 import com.ciena.logx.LogX;
 import com.ciena.logx.logfile.ra.insidious.InsidiousOutputContext;
 import com.grb.insidious.recording.Recording;
-import com.grb.insidious.tl1.TL1Session;
+import com.grb.insidious.ssh.SSHServer;
 
 import com.grb.tl1.TL1AgentDecoder;
 import com.grb.tl1.TL1Message;
@@ -23,8 +21,9 @@ import static spark.Spark.*;
 public class Insidious {
 
     final static public CountDownLatch ExitLatch = new CountDownLatch(1);
-	static private HashMap<String, Session> sessionMap = new HashMap<String, Session>();
-	
+
+	static private HashMap<Integer, SSHServer> serverMap = new HashMap<Integer, SSHServer>();
+
 	static private long nextSessionsId = 1;	
 	synchronized static private long getNextSessionId() {
 		return nextSessionsId++;
@@ -34,50 +33,65 @@ public class Insidious {
 	}
 
 	public void startREST() {
-		post("/sessions", (request, response) -> {
+		post("/servers", (request, response) -> {
 			response.type("application/json");
 			String body = request.body();
 			Recording recording = Recording.parseString(body);
-			Session session = createSession(request.ip(), recording);
-			return encodeSessionJSON(session);
+			SSHServer server = createServerSession(request.ip(), recording);
+			return server.toJSON();
 		});
-		get("/sessions", (request, response) -> {
+		get("/servers", (request, response) -> {
 			response.type("application/json");
-			StringBuilder bldr = new StringBuilder();
-			bldr.append("{\"sessions\": [");
-			Iterator<Session> it = sessionMap.values().iterator();
-			int i = 0;
-			while(it.hasNext()) {
-				if (i > 0) {
-					bldr.append(",");
-				}
-				bldr.append(encodeSessionJSON(it.next()));
-				i++;
-			}
-			bldr.append("]}");
-			return bldr.toString();
+			return serversToJson();
 		});
-		delete("/sessions", new Route() {
+		delete("/servers", new Route() {
 			@Override
 			public Object handle(Request request, Response response) throws Exception {
-				// TODO Auto-generated method stub
-				return null;
+				response.type("application/json");
+				String retStr = serversToJson();
+				for(SSHServer server : serverMap.values()) {
+					server.close();
+				}
+				serverMap.clear();
+				return retStr;
 			}
 		});
-		get("/session/:name", (request, response) -> {
+		get("/server/:name", (request, response) -> {
 			response.type("application/json");
-			return encodeSessionJSON(sessionMap.get(request.params(":name")));
+			String returnStr;
+			try {
+				response.type("application/json");
+				Integer port = Integer.valueOf(request.params(":name"));
+				SSHServer server = serverMap.get(port);
+				if (server != null) {
+					return server.toJSON();
+				}
+				returnStr = String.format("{\"error\": \"Server %d not found\"}", port);
+			} catch(NumberFormatException e) {
+				returnStr = String.format("{\"error\": \"Unable to convert %s to a port number\"}", request.params(":name"));
+			}
+			response.status(404);
+			return returnStr;
 		});
-		delete("/session/:name", new Route() {
+		delete("/server/:name", new Route() {
 			@Override
 			public Object handle(Request request, Response response) throws Exception {
-				Session session = sessionMap.get(request.params(":name"));
-				if (session != null) {
-					session.close();
-					sessionMap.remove(request.params(":name"));
-					return encodeSessionJSON(session);
+				String returnStr;
+				try {
+					response.type("application/json");
+					Integer port = Integer.valueOf(request.params(":name"));
+					SSHServer server = serverMap.get(port);
+					if (server != null) {
+						serverMap.remove(port);
+						server.close();
+						return server.toJSON();
+					}
+					returnStr = String.format("{\"error\": \"Server %d not found\"}", port);
+				} catch(NumberFormatException e) {
+					returnStr = String.format("{\"error\": \"Unable to convert %s to a port number\"}", request.params(":name"));
 				}
-				return null;
+				response.status(404);
+				return returnStr;
 			}
 		});
 	}
@@ -199,30 +213,47 @@ public class Insidious {
 		return null;
 	}
 
-	private static Session createSession(String client, Recording recording) {
-		Session session = null;
-		try {
-			long sessionId = getNextSessionId();
-			if (recording.protocol.equals(Protocol.TL1)) {
-				TL1Session tl1Session = new TL1Session(String.valueOf(sessionId));
-				session = tl1Session;
-				tl1Session.setClient(client);
-				sessionMap.put(tl1Session.getId(), tl1Session);
-				tl1Session.setRecording(recording);
-				tl1Session.start();
+	private static SSHServer createServerSession(String restClient, Recording recording) throws Exception {
+		SSHServer sshServer = null;
+		int portToUse = 0;
+		if ((recording.port != null) && (recording.port > 0)) {
+			portToUse = recording.port;
+			sshServer = serverMap.get(portToUse);
+			// make sure no current client sessions on this port ...
+		}
+		if (sshServer == null) {
+			try {
+				sshServer = new SSHServer(restClient, portToUse);
+				sshServer.setRecording(recording);
+				int port = sshServer.start();
+				serverMap.put(port, sshServer);
+			} catch (Exception e) {
+				e.printStackTrace();
+				throw e;
+			}
+		} else {
+			if (sshServer.getProtocol().equals(recording.protocol)) {
+				sshServer.setRecording(recording);
 			} else {
 				// error
 			}
-			return session;
-		} catch(Exception e) {
-			e.printStackTrace();
-			return null;
 		}
+		return sshServer;
 	}
-	
-	private static String encodeSessionJSON(Session session) {
-		return String.format("{\"protocol\": \"%s\", \"id\": \"%s\", \"port\": \"%d\", \"client\": \"%s\", \"source\": \"%s\"}",
-				session.getProtocol().toString().toLowerCase(), session.getId(), session.getPort(), session.getClient(), session.getSource());
+
+	private static String serversToJson() {
+		StringBuilder bldr = new StringBuilder();
+		bldr.append("{\"servers\": [");
+		boolean firstTime = true;
+		for(SSHServer server : serverMap.values()) {
+			if (!firstTime) {
+				bldr.append(", ");
+			}
+			bldr.append(server.toJSON());
+			firstTime = false;
+		}
+		bldr.append("]}");
+		return bldr.toString();
 	}
 
 	public static String transliterateCRLF(String input) {

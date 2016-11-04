@@ -1,25 +1,30 @@
 package com.grb.insidious.ssh;
 
+import com.grb.insidious.Protocol;
+import com.grb.insidious.Session;
+import com.grb.insidious.SessionFactory;
+import com.grb.insidious.recording.Recording;
 import org.apache.sshd.common.Factory;
 import org.apache.sshd.common.NamedFactory;
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.auth.UserAuth;
-import org.apache.sshd.server.auth.UserAuthNone;
 import org.apache.sshd.server.auth.UserAuthNoneFactory;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.ByteBuffer;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,24 +33,27 @@ import java.util.Map;
 /**
  * Created by gbromfie on 12/1/15.
  */
-public class SSHServer {
+public class SSHServer implements SSHServerClientListener {
 	final Logger _logger = LoggerFactory.getLogger(SSHServer.class);
 
     final static private String KEYFILE = "keys/host.ser";
     final static private String KEYFILEPATH = "src/main/resources/" + KEYFILE;
 
-	private String _name;
-    private int _port;
-    private SshServer _server;
-    private SSHServerClientListener _listener;
+    static public HashMap<String, Session> sessionMap = new HashMap<String, Session>();
 
-    public SSHServer(String name, int listenPort, SSHServerClientListener listener) {
-    	_name = name;
+    private String _restClient;
+    private int _port;
+    private Recording _recording;
+    private SshServer _server;
+    private long nextSessionsId = 1;
+
+    public SSHServer(String restClient, int listenPort) {
+        _restClient = restClient;
     	_port = listenPort;
+        _recording = null;
     	_server = null;
-    	_listener = listener;
     }
-    
+
     public int start() throws IOException, URISyntaxException {
     	if (_server == null) {
     		_server = SshServer.setUpDefaultServer();
@@ -57,7 +65,7 @@ public class SSHServer {
             } else {
                 URL url = ClassLoader.getSystemResource(KEYFILE);
                 if (url == null) {
-                    System.out.println("COULDN'T FIND URL");
+                    throw new IOException(String.format("Unable to load key file at \"%s\"",KEYFILE));
                 } else {
                     final Map<String, String> env = new HashMap<>();
                     final String[] array = url.toURI().toString().split("!");
@@ -70,9 +78,7 @@ public class SSHServer {
                 @Override
                 public Command create() {
                     SSHServerClient c = new SSHServerClient();
-                    if (_listener != null) {
-                        _listener.newSSHServerClient(c);
-                    }
+                    newSSHServerClient(c);
                     return c;
                 }
             });
@@ -83,7 +89,7 @@ public class SSHServer {
     	_server.start();
     	_port = _server.getPort();
     	if (_logger.isInfoEnabled()) {
-    		_logger.info(String.format("%s - started listening on port %d", _name, _server.getPort()));
+    		_logger.info(String.format("Started listening on port %d", _port));
     	}
     	return _server.getPort();
     }
@@ -92,7 +98,7 @@ public class SSHServer {
     	if (_server != null) {
         	_server.stop();
         	if (_logger.isInfoEnabled()) {
-        		_logger.info(String.format("%s - stopped listening on port %d", _name, _port));
+        		_logger.info(String.format("Stopped listening on port %d", _port));
         	}
     	}
     }
@@ -105,5 +111,51 @@ public class SSHServer {
 
     public int getPort() {
     	return _port;
+    }
+
+    public Protocol getProtocol() {
+        return _recording.protocol;
+    }
+
+    public Recording getRecording() {
+        return _recording;
+    }
+
+    public void setRecording(Recording recording) {
+        _recording = recording;
+    }
+
+    public void removeSession(Session session) {
+        sessionMap.remove(session.getId());
+    }
+
+    public String toJSON() {
+        StringBuilder bldr = new StringBuilder("[");
+        for(String id : sessionMap.keySet()) {
+            if (bldr.length() > 1) {
+                bldr.append(", ");
+            }
+            bldr.append("\"");
+            bldr.append(id);
+            bldr.append("\"");
+        }
+        bldr.append("]");
+        return String.format("{\"protocol\": \"%s\", \"port\": \"%d\", \"sessions\": %s}",
+                getProtocol().toString().toLowerCase(), getPort(), bldr.toString());
+    }
+
+    @Override
+    public void newSSHServerClient(SSHServerClient client) {
+        try {
+            Session session = SessionFactory.createSession(_recording.protocol, getNextSessionId(), this, client);
+            session.setRecording(_recording);
+            sessionMap.put(session.getId(), session);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    synchronized private String getNextSessionId() {
+        return String.valueOf(nextSessionsId++);
     }
 }

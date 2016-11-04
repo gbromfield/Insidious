@@ -126,7 +126,7 @@ public class TL1RecordingManager {
 				}
 			}
 		}
-        System.out.println(_commandDB);
+//        System.out.println(_commandDB);
     }
         
     /**

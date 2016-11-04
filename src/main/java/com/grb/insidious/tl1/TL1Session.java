@@ -19,8 +19,11 @@ import com.grb.insidious.ssh.SSHServerClient;
 import com.grb.insidious.ssh.SSHServerClientListener;
 import com.grb.tl1.TL1MessageMaxSizeExceededException;
 import com.grb.tl1.TL1OutputMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class TL1Session implements Session, TL1RecordingListener, SSHServerClientListener {
+public class TL1Session implements Session, TL1RecordingListener, Runnable {
+	final Logger logger = LoggerFactory.getLogger(TL1Session.class);
     private enum ReaderThreadOperation {
         START,
         STOP,
@@ -28,28 +31,19 @@ public class TL1Session implements Session, TL1RecordingListener, SSHServerClien
     };
 
     private ArrayBlockingQueue<ReaderThreadOperation> _clientReadQ = new ArrayBlockingQueue<ReaderThreadOperation>(100);
-	static private HashMap<String, TL1Session> _sessions = new HashMap<String, TL1Session>();
-	
-	static public TL1Session getSession(String name) {
-		return _sessions.get(name);
-	}
-	
+
 	private String _id;
-	private int _port;
-	private String _clientSource;
-	private TL1RecordingManager _recordingMgr;
-	private String _source;
 	private SSHServer _sshServer;
 	private SSHServerClient _client;
-	
-	public TL1Session(String id) {
+	private TL1RecordingManager _recordingMgr;
+
+	public TL1Session(String id, SSHServer sshServer, SSHServerClient client) {
 		_id = id;
-		_port = 0;
-		_clientSource = "";
-		_recordingMgr = new TL1RecordingManager(_id, this);
-		_source = "";
-		_sshServer = null;
-		_client = null;
+		_sshServer = sshServer;
+		_client = client;
+		_client.setRunnable(this, String.format("%s_%d_%s", TL1Session.class.getSimpleName(),
+				sshServer.getPort(), _id));
+		_recordingMgr = new TL1RecordingManager(String.format("%d_%s", sshServer.getPort(), _id), this);
 	}
 
 	@Override
@@ -60,56 +54,31 @@ public class TL1Session implements Session, TL1RecordingListener, SSHServerClien
 	@Override
 	public int getPort() {
 		return _sshServer.getPort();
-	}	
+	}
 
 	@Override
 	public Protocol getProtocol() {
 		return Protocol.TL1;
 	}
 
-	public void setClient(String client) {
-		_clientSource = client;
-	}
-	
-	@Override
-	public String getClient() {
-		return _clientSource;
-	}
-
-	@Override
-	public String getSource() {
-		return _source;
-	}
-
-	@Override
-	public void start() throws IOException {
-		_sshServer = new SSHServer(_id, _port, this);
-		try {
-			_sshServer.start();
-		} catch (URISyntaxException e) {
-			e.printStackTrace();
-		}
-	}
-
 	@Override
 	public void close() {
-		if (_client != null) {
-			_client.close();
+		if (logger.isInfoEnabled()) {
+			logger.info(String.format("closing client on port %d", _sshServer.getPort()));
 		}
-		if (_sshServer != null) {
-			_sshServer.close();
-		}
+		_sshServer.removeSession(this);
+		_client.close();
+		_recordingMgr.close();
+
 		if (_clientReadQ != null) {
 			try {
 				_clientReadQ.put(ReaderThreadOperation.CLOSE);
 			} catch (InterruptedException e) {}
 		}
-		if (_recordingMgr != null) {
-			_recordingMgr.close();
-		}
 	}
 
-    public void setRecording(Recording recording) throws TL1MessageMaxSizeExceededException, ParseException, MalformedURLException, IOException {
+	@Override
+    public void setRecording(Recording recording) throws Exception {
 		BufferedReader in = null;
 		try {
 			if (recording.recordingURL != null) {
@@ -128,22 +97,10 @@ public class TL1Session implements Session, TL1RecordingListener, SSHServerClien
 					if (recording.port != null) {
 						recordingFromURL.port = recording.port;
 					}
-					if (recordingFromURL.port == null) {
-						_port = 0;
-					} else {
-						_port = recordingFromURL.port;
-					}
 					_recordingMgr.setRecording(recordingFromURL);
-					_source = recording.recordingURL;
 				}
 			} else 	if (recording.elements != null) {
-				if (recording.port == null) {
-					_port = 0;
-				} else {
-					_port = recording.port;
-				}
 				_recordingMgr.setRecording(recording);
-				_source = "inline recording";
 			} else {
 				// error nothing specified
 			}
@@ -166,56 +123,56 @@ public class TL1Session implements Session, TL1RecordingListener, SSHServerClien
 	}
 
 	@Override
-	public void newSSHServerClient(SSHServerClient client) {
-		_client = client;
-		client.setRunnable(new Runnable() {
-            @Override
-            public void run() {
-                char[] data = new char[65535];
-                ByteBuffer buffer = ByteBuffer.allocate(data.length);
-                BufferedReader r = new BufferedReader(new InputStreamReader(client.getIn()));
-                boolean enabled = true;
-				while (true) {
-					try {
-						while ((!enabled) || (_clientReadQ.size() > 0)) {
-							ReaderThreadOperation oper = _clientReadQ.take();
-							if (oper.equals(ReaderThreadOperation.START)) {
-								enabled = true;
-							} else if (oper.equals(ReaderThreadOperation.STOP)) {
-								enabled = false;
-							} else {
-								return;
-							}
-						}
-						int numRead = r.read(data);
-						if (numRead == -1) {
-//                            close();
-							return;
-						}
-						while (_clientReadQ.size() > 0) {
-							ReaderThreadOperation oper = _clientReadQ.take();
-							if (oper.equals(ReaderThreadOperation.START)) {
-								enabled = true;
-							} else if (oper.equals(ReaderThreadOperation.STOP)) {
-								enabled = false;
-							} else {
-								return;
-							}
-						}
-						for(int i = 0; i < numRead; i++) {
-							buffer.put((byte) data[i]);
-						}
-						if (enabled) {
-							buffer.flip();
-							_recordingMgr.processInput(buffer);
-							buffer.clear();
-						}
-					} catch(Exception e) {
-						e.printStackTrace();
-					} finally {
+	public void run() {
+		char[] data = new char[65535];
+		ByteBuffer buffer = ByteBuffer.allocate(data.length);
+		BufferedReader r = new BufferedReader(new InputStreamReader(_client.getIn()));
+		boolean enabled = true;
+		while (true) {
+			try {
+				while ((!enabled) || (_clientReadQ.size() > 0)) {
+					ReaderThreadOperation oper = _clientReadQ.take();
+					if (oper.equals(ReaderThreadOperation.START)) {
+						enabled = true;
+					} else if (oper.equals(ReaderThreadOperation.STOP)) {
+						enabled = false;
+					} else {
+						return;
 					}
 				}
-            }
-        }, "SSHServerClient_" + _id); // TODO:
- 	}
+				int numRead;
+				try {
+					numRead = r.read(data);
+					if ((numRead == -1) || (data[0] == 4)) {
+						close();
+						return;
+					}
+				} catch(IOException e) {
+					close();
+					return;
+				}
+				while (_clientReadQ.size() > 0) {
+					ReaderThreadOperation oper = _clientReadQ.take();
+					if (oper.equals(ReaderThreadOperation.START)) {
+						enabled = true;
+					} else if (oper.equals(ReaderThreadOperation.STOP)) {
+						enabled = false;
+					} else {
+						return;
+					}
+				}
+				for(int i = 0; i < numRead; i++) {
+					buffer.put((byte) data[i]);
+				}
+				if (enabled) {
+					buffer.flip();
+					_recordingMgr.processInput(buffer);
+					buffer.clear();
+				}
+			} catch(Exception e) {
+				e.printStackTrace();
+			} finally {
+			}
+		}
+	}
 }

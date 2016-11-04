@@ -39,16 +39,13 @@ To start the simulator:
 
     java -jar target/insidious-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 
-**Note: Insidious should be started in Insidious' root directory since it loads an SSH key file assumed to be in
-the "keys" subdirectory. This should be moved to be a resource in the jar file. **
-
 When the simulator is started it receives instructions through the rest interface (port 4567) to load recordings 
 and open up ports.
 
 ## REST Interface
 
-### Creating a TL1 Session on port 12349 and loading a capture from a file
-POST http://localhost:4567/sessions with payload below to load a recording from a file:
+### Creating a TL1 Server on port 12349 and loading a capture from a file
+POST http://localhost:4567/servers with payload below to load a recording from a file:
 
     {
       "protocol": "tl1",
@@ -62,24 +59,25 @@ A sample response:
 
     {
       "protocol": "tl1",
-      "id": "1",
       "port": "12349",
-      "client": "0:0:0:0:0:0:0:1",
-      "source": "file:///Users/gbromfie/Development/Insidious/samples/recording.json"
+      "sessions": []
     }
 
-"Protocol", "port", and "recordingURL" are copied back. "id" is the session id and is used to delete the session.
-"client" is the ipv6 address of the client.
+"Protocol" and "port" are copied back.
 
-### Deleting a Session
-DELETE http://localhost:4567/session/<sessionid>
+### Deleting a Server
+DELETE http://localhost:4567/server/<port>
 
-Sessionid is returned in the POST response.
+### Getting all Servers
+GET http://localhost:4567/servers
 
-When a session is deleted you will no longer be able to connect to the SSH port.
+### Deleting all Servers
+DELETE http://localhost:4567/servers
 
-### Creating a TL1 Session on port 12349 and providing an inline recording
-POST http://localhost:4567/sessions with payload below to load an inline recording:
+When a server is deleted, all sessions are terminated and you will no longer be able to connect to that port.
+
+### Creating a TL1 Server on port 12349 and providing an inline recording
+POST http://localhost:4567/servers with payload below to load an inline recording:
 
     {
       "protocol": "tl1",
