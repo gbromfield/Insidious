@@ -9,8 +9,11 @@ import com.ciena.logx.logfile.ra.flirc2.Flirc2OutputContext;
 import com.grb.flirc2.recording.Recording;
 import com.grb.flirc2.ssh.SSHServer;
 
+import com.grb.flirc2.tl1.TL1RecordingListener;
+import com.grb.flirc2.tl1.TL1RecordingManager;
 import com.grb.tl1.TL1AgentDecoder;
 import com.grb.tl1.TL1Message;
+import com.grb.tl1.TL1OutputMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import spark.Request;
@@ -40,10 +43,17 @@ public class Flirc2 {
 				logger.info(String.format("%s %s", request.requestMethod(), request.url()));
 			}
 			response.type("application/json");
-			String body = request.body();
-			Recording recording = Recording.parseString(body);
-			SSHServer server = createServerSession(request.ip(), recording);
-			return server.toJSON();
+			try {
+				String body = request.body();
+				Recording recording = Recording.parseString(body);
+				SSHServer server = createServerSession(request.ip(), recording);
+				return server.toJSON();
+			} catch(Exception e) {
+				e.printStackTrace();
+				response.status(404);
+				String msg = e.getMessage().replaceAll("\"", "'");
+				return String.format("{\"error\": \"%s - %s\"}", e.getClass().getSimpleName(), msg);
+			}
 		});
 		get("/servers", (request, response) -> {
 			if (logger.isInfoEnabled()) {
@@ -257,6 +267,9 @@ public class Flirc2 {
 				int port = sshServer.start();
 				serverMap.put(port, sshServer);
 			} catch (Exception e) {
+				if (sshServer != null) {
+					sshServer.close();
+				}
 				e.printStackTrace();
 				throw e;
 			}
@@ -284,7 +297,7 @@ public class Flirc2 {
 		bldr.append("]}");
 		return bldr.toString();
 	}
-
+	
 	public static String transliterateCRLF(String input) {
 		char[] inputChars = input.toCharArray();
 		StringBuilder bldr = new StringBuilder();

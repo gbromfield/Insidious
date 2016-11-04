@@ -28,6 +28,9 @@ public class RecordingDeserializer implements JsonDeserializer<Recording> {
 				final JsonElement captureElement = captureElementsArray.get(i);
 				jsonObject = captureElement.getAsJsonObject();
 				final JsonElement protocol = jsonObject.get("protocol");
+				if (protocol == null) {
+					throw new IllegalArgumentException("Protocol is mandatory in recording element");
+				}
 				recording.elements[i].protocol = Protocol.valueOfIgnoreCase(protocol.getAsString());
 				final JsonElement timestamp = jsonObject.get("timestamp");
 				if (timestamp != null) {

@@ -11,6 +11,6 @@ public enum Protocol {
 			}
 		}
 		throw new IllegalArgumentException(
-				String.format("No enum constant %s.%s exists", Protocol.class.getName(), value));
+				String.format("Invalid Protocol %s", value));
 	}
 }
