@@ -1,4 +1,4 @@
-package com.grb.insidious.recording;
+package com.grb.flirc2.recording;
 
 public enum TCPServer {
 	DISCONNECT,
@@ -12,6 +12,6 @@ public enum TCPServer {
 				return values[i];
 			}
 		}
-		throw new IllegalArgumentException("No enum constant com.grb.insidious.recording.TCPServer." + value);
+		throw new IllegalArgumentException(String.format("No enum constant %s.%s", TCPServer.class.getName(), value));
 	}
 }

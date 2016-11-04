@@ -1,4 +1,4 @@
-package com.grb.insidious.tl1;
+package com.grb.flirc2.tl1;
 
 import com.grb.tl1.*;
 import org.slf4j.Logger;
@@ -6,7 +6,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 
 /**
  * Created by gbromfie on 10/29/16.

@@ -1,24 +1,26 @@
-package com.grb.insidious;
+package com.grb.flirc2;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.concurrent.CountDownLatch;
 
 import com.ciena.logx.LogX;
-import com.ciena.logx.logfile.ra.insidious.InsidiousOutputContext;
-import com.grb.insidious.recording.Recording;
-import com.grb.insidious.ssh.SSHServer;
+import com.ciena.logx.logfile.ra.flirc2.Flirc2OutputContext;
+import com.grb.flirc2.recording.Recording;
+import com.grb.flirc2.ssh.SSHServer;
 
 import com.grb.tl1.TL1AgentDecoder;
 import com.grb.tl1.TL1Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import spark.Request;
 import spark.Response;
 import spark.Route;
 
 import static spark.Spark.*;
 
-public class Insidious {
+public class Flirc2 {
+	final Logger logger = LoggerFactory.getLogger(Flirc2.class);
 
     final static public CountDownLatch ExitLatch = new CountDownLatch(1);
 
@@ -29,11 +31,14 @@ public class Insidious {
 		return nextSessionsId++;
 	}
 	
-	public Insidious() {
+	public Flirc2() {
 	}
 
 	public void startREST() {
 		post("/servers", (request, response) -> {
+			if (logger.isInfoEnabled()) {
+				logger.info(String.format("%s %s", request.requestMethod(), request.url()));
+			}
 			response.type("application/json");
 			String body = request.body();
 			Recording recording = Recording.parseString(body);
@@ -41,12 +46,18 @@ public class Insidious {
 			return server.toJSON();
 		});
 		get("/servers", (request, response) -> {
+			if (logger.isInfoEnabled()) {
+				logger.info(String.format("%s %s", request.requestMethod(), request.url()));
+			}
 			response.type("application/json");
 			return serversToJson();
 		});
 		delete("/servers", new Route() {
 			@Override
 			public Object handle(Request request, Response response) throws Exception {
+				if (logger.isInfoEnabled()) {
+					logger.info(String.format("%s %s", request.requestMethod(), request.url()));
+				}
 				response.type("application/json");
 				String retStr = serversToJson();
 				for(SSHServer server : serverMap.values()) {
@@ -57,6 +68,9 @@ public class Insidious {
 			}
 		});
 		get("/server/:name", (request, response) -> {
+			if (logger.isInfoEnabled()) {
+				logger.info(String.format("%s %s", request.requestMethod(), request.url()));
+			}
 			response.type("application/json");
 			String returnStr;
 			try {
@@ -67,8 +81,14 @@ public class Insidious {
 					return server.toJSON();
 				}
 				returnStr = String.format("{\"error\": \"Server %d not found\"}", port);
+				if (logger.isErrorEnabled()) {
+					logger.error(String.format("Server %d not found", port));
+				}
 			} catch(NumberFormatException e) {
 				returnStr = String.format("{\"error\": \"Unable to convert %s to a port number\"}", request.params(":name"));
+				if (logger.isErrorEnabled()) {
+					logger.error(String.format("Unable to convert %s to a port number", request.params(":name")));
+				}
 			}
 			response.status(404);
 			return returnStr;
@@ -76,6 +96,9 @@ public class Insidious {
 		delete("/server/:name", new Route() {
 			@Override
 			public Object handle(Request request, Response response) throws Exception {
+				if (logger.isInfoEnabled()) {
+					logger.info(String.format("%s %s", request.requestMethod(), request.url()));
+				}
 				String returnStr;
 				try {
 					response.type("application/json");
@@ -87,8 +110,14 @@ public class Insidious {
 						return server.toJSON();
 					}
 					returnStr = String.format("{\"error\": \"Server %d not found\"}", port);
+					if (logger.isErrorEnabled()) {
+						logger.error(String.format("Server %d not found", port));
+					}
 				} catch(NumberFormatException e) {
 					returnStr = String.format("{\"error\": \"Unable to convert %s to a port number\"}", request.params(":name"));
+					if (logger.isErrorEnabled()) {
+						logger.error(String.format("Unable to convert %s to a port number", request.params(":name")));
+					}
 				}
 				response.status(404);
 				return returnStr;
@@ -202,7 +231,7 @@ public class Insidious {
 		ArrayList<String> inputFiles = new ArrayList<String>();
 		inputFiles.add("samples/bpprov.2.log");
 		ArrayList<File>  inputFileList = LogX.processFilenames(inputFiles, null);
-		InsidiousOutputContext ctx = new InsidiousOutputContext();
+		Flirc2OutputContext ctx = new Flirc2OutputContext();
 		TL1LogRecordParser parser = new TL1LogRecordParser(ctx);
 		ctx.addParser(parser);
 		LogX logx = new LogX(inputFileList, ctx);
@@ -278,8 +307,8 @@ public class Insidious {
 	}
 
 	public static void main(String[] args) {
-		InsidiousCommandLineProcessor clp = new InsidiousCommandLineProcessor();
-		InsidiousProperties props = (InsidiousProperties)clp.parse(args);
+		Flirc2CommandLineProcessor clp = new Flirc2CommandLineProcessor();
+		Flirc2Properties props = (Flirc2Properties)clp.parse(args);
 
 		if (props.getUnknownArg() != null) {
 			System.out.println(String.format("Unknown argument: \"%s\"", props.getUnknownArg()));
@@ -300,7 +329,7 @@ public class Insidious {
 		}
 
 		if ((props.getInputFilenames() == null) || (props.getInputFilenames().size() == 0)) {
-			Insidious ins = new Insidious();
+			Flirc2 ins = new Flirc2();
 			ins.startREST();
 			try {
 				ExitLatch.await();
@@ -310,9 +339,9 @@ public class Insidious {
 			System.exit(0);
 		}
 
-		InsidiousOutputContext ctx = null;
+		Flirc2OutputContext ctx = null;
 		try {
-			ctx = new InsidiousOutputContext(props);
+			ctx = new Flirc2OutputContext(props);
 			LogX logx = new LogX(props);
 			logx.run();
 			System.out.println(ctx.logItemsToString());

@@ -1,13 +1,13 @@
-package com.grb.insidious.tl1;
+package com.grb.flirc2.tl1;
 
 import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-import com.grb.insidious.Protocol;
-import com.grb.insidious.recording.Recording;
-import com.grb.insidious.recording.RecordingElement;
+import com.grb.flirc2.Protocol;
+import com.grb.flirc2.recording.Recording;
+import com.grb.flirc2.recording.RecordingElement;
 import com.grb.tl1.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

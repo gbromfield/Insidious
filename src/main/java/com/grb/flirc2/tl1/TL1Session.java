@@ -1,23 +1,17 @@
-package com.grb.insidious.tl1;
+package com.grb.flirc2.tl1;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
-import java.text.ParseException;
-import java.util.HashMap;
 import java.util.concurrent.ArrayBlockingQueue;
 
-import com.grb.insidious.Protocol;
-import com.grb.insidious.Session;
-import com.grb.insidious.recording.Recording;
-import com.grb.insidious.ssh.SSHServer;
-import com.grb.insidious.ssh.SSHServerClient;
-import com.grb.insidious.ssh.SSHServerClientListener;
-import com.grb.tl1.TL1MessageMaxSizeExceededException;
+import com.grb.flirc2.Protocol;
+import com.grb.flirc2.Session;
+import com.grb.flirc2.recording.Recording;
+import com.grb.flirc2.ssh.SSHServer;
+import com.grb.flirc2.ssh.SSHServerClient;
 import com.grb.tl1.TL1OutputMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

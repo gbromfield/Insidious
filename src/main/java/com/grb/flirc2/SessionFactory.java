@@ -1,8 +1,8 @@
-package com.grb.insidious;
+package com.grb.flirc2;
 
-import com.grb.insidious.ssh.SSHServer;
-import com.grb.insidious.ssh.SSHServerClient;
-import com.grb.insidious.tl1.TL1Session;
+import com.grb.flirc2.ssh.SSHServer;
+import com.grb.flirc2.ssh.SSHServerClient;
+import com.grb.flirc2.tl1.TL1Session;
 
 /**
  * Created by gbromfie on 11/3/16.

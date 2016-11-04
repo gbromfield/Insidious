@@ -1,4 +1,4 @@
-package com.grb.insidious.ssh;
+package com.grb.flirc2.ssh;
 
 import org.apache.sshd.server.Command;
 import org.apache.sshd.server.Environment;

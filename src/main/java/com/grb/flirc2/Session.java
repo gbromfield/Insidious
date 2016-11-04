@@ -1,8 +1,6 @@
-package com.grb.insidious;
+package com.grb.flirc2;
 
-import com.grb.insidious.recording.Recording;
-
-import java.io.IOException;
+import com.grb.flirc2.recording.Recording;
 
 public interface Session {
 	public Protocol getProtocol();

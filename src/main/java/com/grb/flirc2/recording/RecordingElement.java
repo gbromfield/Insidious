@@ -1,8 +1,8 @@
-package com.grb.insidious.recording;
+package com.grb.flirc2.recording;
 
 import java.util.Date;
 
-import com.grb.insidious.Protocol;
+import com.grb.flirc2.Protocol;
 
 public class RecordingElement {
 	public Protocol protocol;

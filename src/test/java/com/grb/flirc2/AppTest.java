@@ -1,4 +1,4 @@
-package com.grb.insidious;
+package com.grb.flirc2;
 
 import junit.framework.Test;
 import junit.framework.TestCase;

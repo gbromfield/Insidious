@@ -71,7 +71,7 @@
           <configuration>
             <archive>
               <manifest>
-                <mainClass>com.grb.insidious.Insidious</mainClass>
+                <mainClass>com.grb.flirc2.Flirc2</mainClass>
               </manifest>
             </archive>
             <descriptorRefs>

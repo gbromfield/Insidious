@@ -1,9 +1,9 @@
-package com.grb.insidious.ssh;
+package com.grb.flirc2.ssh;
 
-import com.grb.insidious.Protocol;
-import com.grb.insidious.Session;
-import com.grb.insidious.SessionFactory;
-import com.grb.insidious.recording.Recording;
+import com.grb.flirc2.Protocol;
+import com.grb.flirc2.Session;
+import com.grb.flirc2.SessionFactory;
+import com.grb.flirc2.recording.Recording;
 import org.apache.sshd.common.Factory;
 import org.apache.sshd.common.NamedFactory;
 import org.apache.sshd.server.Command;
@@ -14,14 +14,11 @@ import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.ByteBuffer;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Path;
@@ -96,14 +93,18 @@ public class SSHServer implements SSHServerClientListener {
 
     public void stop() throws InterruptedException, IOException {
     	if (_server != null) {
+            if (_logger.isInfoEnabled()) {
+                _logger.info(String.format("Stopped listening on port %d", _port));
+            }
         	_server.stop();
-        	if (_logger.isInfoEnabled()) {
-        		_logger.info(String.format("Stopped listening on port %d", _port));
-        	}
     	}
     }
 
     public void close() {
+        try {
+            stop();
+        } catch (Exception e) {
+        }
         if (_server != null) {
             _server.close(true);
         }

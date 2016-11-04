@@ -1,4 +1,4 @@
-package com.grb.insidious;
+package com.grb.flirc2;
 
 public enum Protocol {
 	TL1;

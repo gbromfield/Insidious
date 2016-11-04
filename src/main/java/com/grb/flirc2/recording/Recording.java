@@ -1,4 +1,4 @@
-package com.grb.insidious.recording;
+package com.grb.flirc2.recording;
 
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -7,7 +7,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
-import com.grb.insidious.Protocol;
+import com.grb.flirc2.Protocol;
 
 public class Recording {
 	public Protocol protocol;

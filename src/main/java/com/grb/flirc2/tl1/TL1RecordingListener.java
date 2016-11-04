@@ -1,4 +1,4 @@
-package com.grb.insidious.tl1;
+package com.grb.flirc2.tl1;
 
 import com.grb.tl1.TL1OutputMessage;
 

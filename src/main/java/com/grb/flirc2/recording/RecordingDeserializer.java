@@ -1,4 +1,4 @@
-package com.grb.insidious.recording;
+package com.grb.flirc2.recording;
 
 import java.lang.reflect.Type;
 import java.text.ParseException;
@@ -10,7 +10,7 @@ import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.grb.insidious.Protocol;
+import com.grb.flirc2.Protocol;
 
 public class RecordingDeserializer implements JsonDeserializer<Recording> {
 	final static SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS");
