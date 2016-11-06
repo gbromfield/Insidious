@@ -115,7 +115,7 @@ public class SSHServer implements SSHServerClientListener {
     }
 
     public Protocol getProtocol() {
-        return _recording.protocol;
+        return _recording.getProtocol();
     }
 
     public Recording getRecording() {
@@ -148,7 +148,7 @@ public class SSHServer implements SSHServerClientListener {
     @Override
     public void newSSHServerClient(SSHServerClient client) {
         try {
-            Session session = SessionFactory.createSession(_recording.protocol, getNextSessionId(), this, client);
+            Session session = SessionFactory.createSession(_recording.getProtocol(), getNextSessionId(), this, client);
             session.setRecording(_recording);
             sessionMap.put(session.getId(), session);
         } catch (Exception e) {

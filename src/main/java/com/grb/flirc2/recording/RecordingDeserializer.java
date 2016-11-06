@@ -12,113 +12,121 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import com.grb.flirc2.Protocol;
 
-public class RecordingDeserializer implements JsonDeserializer<Recording> {
+public class RecordingDeserializer implements JsonDeserializer<RecordingJson> {
 	final static SimpleDateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss,SSS");
 
-	static public Recording deserializeRecording(JsonObject parentJsonObject) {
-		Recording recording = new Recording();
-		recording.elements = null;
+	static public RecordingJson deserializeRecording(JsonObject parentJsonObject) {
+		RecordingJson recordingJson = new RecordingJson();
+		recordingJson.elements = null;
 		JsonObject jsonObject = null;
 		final JsonElement recordingElements = parentJsonObject.get("recording");
 		if (recordingElements != null) {
 			final JsonArray captureElementsArray = recordingElements.getAsJsonArray();
-			recording.elements = new RecordingElement[captureElementsArray.size()];
-			for (int i = 0; i < recording.elements.length; i++) {
-				recording.elements[i] = new RecordingElement();
+			recordingJson.elements = new RecordingElement[captureElementsArray.size()];
+			for (int i = 0; i < recordingJson.elements.length; i++) {
+				recordingJson.elements[i] = new RecordingElement();
 				final JsonElement captureElement = captureElementsArray.get(i);
 				jsonObject = captureElement.getAsJsonObject();
 				final JsonElement protocol = jsonObject.get("protocol");
 				if (protocol == null) {
 					throw new IllegalArgumentException("Protocol is mandatory in recording element");
 				}
-				recording.elements[i].protocol = Protocol.valueOfIgnoreCase(protocol.getAsString());
+				recordingJson.elements[i].protocol = Protocol.valueOfIgnoreCase(protocol.getAsString());
 				final JsonElement timestamp = jsonObject.get("timestamp");
 				if (timestamp != null) {
 					try {
-						recording.elements[i].timestampStr = timestamp.getAsString();
-						recording.elements[i].timestamp = dateFormatter.parse(timestamp.getAsString());
+						recordingJson.elements[i].timestampStr = timestamp.getAsString();
+						recordingJson.elements[i].timestamp = dateFormatter.parse(timestamp.getAsString());
 					} catch (ParseException e) {
 						throw new IllegalArgumentException(String.format("Error parsing timestamp \"%s\"", timestamp.getAsString()), e);
 					}
 				}
 				final JsonElement input = jsonObject.get("input");
 				if (input != null) {
-					recording.elements[i].input = input.getAsString();
+					recordingJson.elements[i].input = input.getAsString();
 				}
 				final JsonElement output = jsonObject.get("output");
 				if (output != null) {
-					recording.elements[i].output = output.getAsString();
+					recordingJson.elements[i].output = output.getAsString();
 				}
 				final JsonElement multiplicity = jsonObject.get("multiplicity");
 				if (multiplicity != null) {
-					recording.elements[i].multiplicity = multiplicity.getAsInt();
+					recordingJson.elements[i].multiplicity = multiplicity.getAsInt();
 				}
 				final JsonElement tcpserver = jsonObject.get("tcpserver");
 				if (tcpserver != null) {
-					recording.elements[i].tcpserver = TCPServer.valueOfIgnoreCase(tcpserver.getAsString());
+					recordingJson.elements[i].tcpserver = TCPServer.valueOfIgnoreCase(tcpserver.getAsString());
 				}
 			}
 		}
-		return recording;
+		return recordingJson;
 	}
 
 	@Override
-	public Recording deserialize(JsonElement json, Type type, JsonDeserializationContext context) throws JsonParseException {
-		Recording recording = new Recording();
+	public RecordingJson deserialize(JsonElement json, Type type, JsonDeserializationContext context) throws JsonParseException {
+		RecordingJson recordingJson = new RecordingJson();
 		JsonObject jsonObject = json.getAsJsonObject();
 
 		final JsonElement protocol = jsonObject.get("protocol");
 		if (protocol != null) {
-		    recording.protocol = Protocol.valueOfIgnoreCase(protocol.getAsString());
+			recordingJson.protocol = Protocol.valueOfIgnoreCase(protocol.getAsString());
 		}
 
 		final JsonElement port = jsonObject.get("port");
 		if (port != null) {
-		    recording.port = port.getAsInt();
+			recordingJson.port = port.getAsInt();
 		}
 
 		final JsonElement recordingURL = jsonObject.get("recordingURL");
 		if (recordingURL != null) {
-			recording.recordingURL = recordingURL.getAsString();
+			throw new IllegalArgumentException("Using deprecated recordingURL json property");
+		}
+		final JsonElement recordingURLs = jsonObject.get("recordingURLs");
+		if (recordingURLs != null) {
+			final JsonArray recordingURLsArray = recordingURLs.getAsJsonArray();
+			recordingJson.recordingURLs = new String[recordingURLsArray.size()];
+			for(int i = 0; i < recordingJson.recordingURLs.length; i++) {
+				recordingJson.recordingURLs[i] = recordingURLsArray.get(i).getAsString();
+			}
 		}
 
 		final JsonElement captureElements = jsonObject.get("recording");
 	    if (captureElements != null) {
 		    final JsonArray captureElementsArray = captureElements.getAsJsonArray();
-		    recording.elements = new RecordingElement[captureElementsArray.size()];
-		    for (int i = 0; i < recording.elements.length; i++) {
-		      recording.elements[i] = new RecordingElement();
+			recordingJson.elements = new RecordingElement[captureElementsArray.size()];
+		    for (int i = 0; i < recordingJson.elements.length; i++) {
+				recordingJson.elements[i] = new RecordingElement();
 		      final JsonElement captureElement = captureElementsArray.get(i);
 		      jsonObject = captureElement.getAsJsonObject();
 	          final JsonElement elementProtocol = jsonObject.get("protocol");
-	          recording.elements[i].protocol = Protocol.valueOfIgnoreCase(elementProtocol.getAsString());
+				recordingJson.elements[i].protocol = Protocol.valueOfIgnoreCase(elementProtocol.getAsString());
 			  final JsonElement timestamp = jsonObject.get("timestamp");
 			  if (timestamp != null) {
 				  try {
-					recording.elements[i].timestampStr = timestamp.getAsString();
-					recording.elements[i].timestamp = dateFormatter.parse(timestamp.getAsString());
-				} catch (ParseException e) {
-					throw new IllegalArgumentException(String.format("Error parsing timestamp \"%s\"", timestamp.getAsString()), e);
-				}
+					  recordingJson.elements[i].timestampStr = timestamp.getAsString();
+					  recordingJson.elements[i].timestamp = dateFormatter.parse(timestamp.getAsString());
+				  } catch (ParseException e) {
+					  throw new IllegalArgumentException(String.format("Error parsing timestamp \"%s\"", timestamp.getAsString()), e);
+				  }
 			  }
 			  final JsonElement input = jsonObject.get("input");
 			  if (input != null) {
-				  recording.elements[i].input = input.getAsString();
+				  recordingJson.elements[i].input = input.getAsString();
 			  }
 			  final JsonElement output = jsonObject.get("output");
 			  if (output != null) {
-				  recording.elements[i].output = output.getAsString();
+				  recordingJson.elements[i].output = output.getAsString();
 			  }
 			  final JsonElement multiplicity = jsonObject.get("multiplicity");
 			  if (multiplicity != null) {
-				  recording.elements[i].multiplicity = multiplicity.getAsInt();
+				  recordingJson.elements[i].multiplicity = multiplicity.getAsInt();
 			  }
 			  final JsonElement tcpserver = jsonObject.get("tcpserver");
 			  if (tcpserver != null) {
-				  recording.elements[i].tcpserver = TCPServer.valueOfIgnoreCase(tcpserver.getAsString());
+				  recordingJson.elements[i].tcpserver = TCPServer.valueOfIgnoreCase(tcpserver.getAsString());
 			  }
 		   }
 	    }
-	    return recording;
+	    return recordingJson;
 	}
 }

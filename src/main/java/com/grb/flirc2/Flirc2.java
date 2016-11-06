@@ -255,8 +255,8 @@ public class Flirc2 {
 	private static SSHServer createServerSession(String restClient, Recording recording) throws Exception {
 		SSHServer sshServer = null;
 		int portToUse = 0;
-		if ((recording.port != null) && (recording.port > 0)) {
-			portToUse = recording.port;
+		if ((recording.getPort() != null) && (recording.getPort() > 0)) {
+			portToUse = recording.getPort();
 			sshServer = serverMap.get(portToUse);
 			// make sure no current client sessions on this port ...
 		}
@@ -274,7 +274,7 @@ public class Flirc2 {
 				throw e;
 			}
 		} else {
-			if (sshServer.getProtocol().equals(recording.protocol)) {
+			if (sshServer.getProtocol().equals(recording.getProtocol())) {
 				sshServer.setRecording(recording);
 			} else {
 				// error
@@ -297,7 +297,7 @@ public class Flirc2 {
 		bldr.append("]}");
 		return bldr.toString();
 	}
-	
+
 	public static String transliterateCRLF(String input) {
 		char[] inputChars = input.toCharArray();
 		StringBuilder bldr = new StringBuilder();

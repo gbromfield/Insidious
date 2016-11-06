@@ -75,38 +75,46 @@ public class TL1RecordingManager {
     	_sessionName = sessionName;
     	_listener = listener;
         _commandDB = new CommandDB();
-    	_timer = new Timer("TL1RecordingManager_" + _sessionName, true);
+    	_timer = null;
     	_agentDecoder = new TL1AgentDecoder();
     	_managerDecoder = new TL1ManagerDecoder();
     }
 
     public void close() {
         _commandDB.reset();
-        _timer.cancel();
+        if (_timer != null) {
+            _timer.cancel();
+        }
     }
 
     public void setRecording(Recording recording) throws TL1MessageMaxSizeExceededException, ParseException {
-        _commandDB.reset();
-    	_timer.cancel();
+        if (_timer != null) {
+            _timer.cancel();
+        }
     	_timer = new Timer("TL1RecordingManager_" + _sessionName, true);
-		if (recording.elements != null) {
-			for(int i = 0; i < recording.elements.length; i++) {
-				RecordingElement element = recording.elements[i];
-				if (element.protocol.equals(Protocol.TL1)) {
-					if (element.input != null) {
-						ByteBuffer buffer = ByteBuffer.wrap(element.input.getBytes());
-						TL1InputMessage tl1Request = (TL1InputMessage) _managerDecoder.decodeTL1Message(buffer);
+        loadRecording(recording);
+    }
+
+    public void loadRecording(Recording recording) throws TL1MessageMaxSizeExceededException, ParseException {
+        _commandDB.reset();
+        List<RecordingElement> elements = recording.getRecordingElements();
+        if (elements != null) {
+            for(RecordingElement element : elements) {
+                if (element.protocol.equals(Protocol.TL1)) {
+                    if (element.input != null) {
+                        ByteBuffer buffer = ByteBuffer.wrap(element.input.getBytes());
+                        TL1InputMessage tl1Request = (TL1InputMessage) _managerDecoder.decodeTL1Message(buffer);
                         int multiplicity = 1;
                         if (element.multiplicity != null) {
                             multiplicity = element.multiplicity;
                         }
-						addInput(tl1Request, element.timestamp.getTime(), multiplicity);
-					}
-					if (element.output != null) {
-						if (_agentDecoder == null) {
-							_agentDecoder = new TL1AgentDecoder();
-						}
-						ByteBuffer buffer = ByteBuffer.wrap(element.output.getBytes());
+                        addInput(tl1Request, element.timestamp.getTime(), multiplicity);
+                    }
+                    if (element.output != null) {
+                        if (_agentDecoder == null) {
+                            _agentDecoder = new TL1AgentDecoder();
+                        }
+                        ByteBuffer buffer = ByteBuffer.wrap(element.output.getBytes());
                         while(buffer.hasRemaining()) {
                             TL1OutputMessage tl1Output = (TL1OutputMessage)_agentDecoder.decodeTL1Message(buffer);
                             if (tl1Output == null) {
@@ -119,16 +127,18 @@ public class TL1RecordingManager {
                                 addOutput(tl1Output, element.timestamp.getTime(), multiplicity);
                             }
                         }
-					}
-					if (element.tcpserver != null) {
-						
-					}
-				}
-			}
-		}
-//        System.out.println(_commandDB);
+                    }
+                    if (element.tcpserver != null) {
+
+                    }
+                }
+            }
+        }
+        if (logger.isDebugEnabled()) {
+            logger.debug(String.format("Session %s command database:\n %s", _sessionName, _commandDB.toString()));
+        }
     }
-        
+
     /**
      * For going from json to internal structure
      */
@@ -164,14 +174,14 @@ public class TL1RecordingManager {
 
     public void processInput(TL1InputMessage input) {
         if (logger.isInfoEnabled()) {
-            logger.info(String.format("Received TL1 command: \"%s\"", input.toString()));
+            logger.info(String.format("Session %s - Received TL1 command: \"%s\"", _sessionName, input.toString()));
         }
         InputElement inElement;
         try {
             inElement = _commandDB.getInputElement(input);
             if (logger.isInfoEnabled()) {
-                logger.info(String.format("Matched command %s in database for TL1 command: \"%s\"",
-                        inElement.toString().trim(), input.toString()));
+                logger.info(String.format("Session %s - Matched command %s in database for TL1 command: \"%s\"",
+                        _sessionName, inElement.toString().trim(), input.toString()));
             }
             OutputElement outElement = inElement.output;
             if (outElement == null) {
@@ -187,13 +197,13 @@ public class TL1RecordingManager {
             }
         } catch (InputElementNotFoundException e) {
             if (logger.isErrorEnabled()) {
-                logger.error(String.format("Failed to get output for command -> %s", e.toString()));
+                logger.error(String.format("Session %s - Failed to get output for command -> %s", _sessionName, e.toString()));
             }
             String tl1Resp = null;
             try {
                 tl1Resp = String.format(
-                        "\r\n\n   \"%s\" 16-01-01 00:00:00\r\nM  %s DENY\r\n   ICNV\r\n   /* %s */\r\n;",
-                        e.getTID(), e.getInput().getCTAG(), e.getReason().toString());
+                        "\r\n\n   \"%s\" 16-01-01 00:00:00\r\nM  %s DENY\r\n   ICNV\r\n   /* Session %s - %s */\r\n;",
+                        e.getTID(), e.getInput().getCTAG(), _sessionName, e.getReason().toString());
                 OutputElement outputElement = new OutputElement();
                 outputElement.multiplicity = 1;
                 outputElement.timestamp = null;
@@ -202,8 +212,8 @@ public class TL1RecordingManager {
                 _timer.schedule(new TL1RecordingTimerTask(outputElement, e.getInput().getCTAG()), 0);
             } catch(Exception e1) {
                 if (logger.isErrorEnabled()) {
-                    logger.error(String.format("Failed to send error response %s for command -> %s - %s",
-                            tl1Resp, input.toString(), e1.getMessage()));
+                    logger.error(String.format("Session %s - Failed to send error response %s for command -> %s - %s",
+                            _sessionName, tl1Resp, input.toString(), e1.getMessage()));
                 }
             }
         }

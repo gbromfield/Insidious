@@ -1,52 +1,119 @@
 package com.grb.flirc2.recording;
 
-import java.io.FileNotFoundException;
-import java.io.FileReader;
+import java.io.*;
+import java.net.URL;
+import java.util.ArrayList;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonSyntaxException;
 import com.grb.flirc2.Protocol;
 
 public class Recording {
-	public Protocol protocol;
-	public Integer port = null;
-	public String recordingURL;
-	public RecordingElement[] elements;
+	private Protocol _protocol;
+	private Integer _port;
+	private ArrayList<String> _recordingURLs;
+	private ArrayList<RecordingElement> _elements;
 
-	final static GsonBuilder gsonBuilder = new GsonBuilder();
-	final static Gson gson;
-	
-	static {
-	    gsonBuilder.registerTypeAdapter(Recording.class, new RecordingDeserializer());
-	    gson = gsonBuilder.create();
+	public Recording() {
+		_protocol = null;
+		_port = null;
+		_recordingURLs = null;
+		_elements = null;
 	}
-	
-	static public Recording parseString(String captureJsonString) {
-	    return gson.fromJson(captureJsonString, Recording.class);
+
+	public Protocol getProtocol() {
+		return _protocol;
 	}
-	
-	static public Recording parseFile(String captureJsonFilename) throws JsonSyntaxException, JsonIOException, FileNotFoundException {
-		return gson.fromJson(new FileReader(captureJsonFilename), Recording.class);
+
+	public Integer getPort() {
+		return _port;
 	}
-	
-	static public void main(String[] args) {
-		parseString("{\"tl1port\": 12346, \"recording\": [{\"protocol\": \"tl1\", \"timestamp\": \"1992-01-01 12:12:11.000\", \"tcpServer\": \"start\"},{\"protocol\": \"tl1\",\"timestamp\": \"1992-01-01 12:12:12.000\",\"input\": \"ACT-USER...\"}]}");
-		parseString("{\"tl1port\": 12346}");
-		parseString("{\"tl1port\": 12346, \"recording\": []}");
+
+	public ArrayList<String> getRecordingURLs() {
+		return _recordingURLs;
+	}
+
+	public ArrayList<RecordingElement> getRecordingElements() {
+		return _elements;
+	}
+
+	public void addRecordingJson(RecordingJson recordingJson) {
+		if (recordingJson.protocol != null) {
+			if (_protocol == null) {
+				_protocol = recordingJson.protocol;
+			} else {
+				if (!recordingJson.protocol.equals(_protocol)) {
+					throw new IllegalArgumentException(
+							String.format("Mismatched protocol, expected %s, got %s",
+									_protocol.toString(), recordingJson.protocol.toString()));
+				}
+			}
+		}
+		if (recordingJson.port != null) {
+			if (_port == null) {
+				_port = recordingJson.port;
+			} else {
+				if (!recordingJson.port.equals(_port)) {
+					throw new IllegalArgumentException(
+							String.format("Mismatched port, expected %d, got %d",
+									_port, recordingJson.port));
+				}
+			}
+		}
+		if (recordingJson.recordingURLs != null) {
+			if (_recordingURLs == null) {
+				_recordingURLs = new ArrayList<String>();
+			}
+			for(int i = 0; i < recordingJson.recordingURLs.length; i++) {
+				_recordingURLs.add(recordingJson.recordingURLs[i]);
+			}
+		}
+		if (recordingJson.elements != null) {
+			if (_elements == null) {
+				_elements = new ArrayList<RecordingElement>();
+			}
+			for(int i = 0; i < recordingJson.elements.length; i++) {
+				_elements.add(recordingJson.elements[i]);
+			}
+		}
+	}
+
+	static public Recording parseString(String jsonStr) throws IOException {
+		Recording recording = new Recording();
+		parseString(recording, jsonStr);
+		if (recording.getProtocol() == null) {
+			throw new IllegalArgumentException("Recording has no protocol specified");
+		}
+		return recording;
+	}
+
+	static public void parseString(Recording recording, String jsonStr) throws IOException {
+		RecordingJson recordingJson = RecordingJson.parseString(jsonStr);
+		recording.addRecordingJson(recordingJson);
+		if (recordingJson.recordingURLs != null) {
+			for(int i = 0; i < recordingJson.recordingURLs.length; i++) {
+				parseURL(recording, recordingJson.recordingURLs[i]);
+			}
+		}
+	}
+
+	static public void parseURL(Recording recording, String urlStr) throws IOException {
+		BufferedReader in = null;
 		try {
-			Recording c = parseFile("./samples/sample1.json");
-			System.out.println(c);
-		} catch (JsonSyntaxException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (JsonIOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			URL recordingURL = new URL(urlStr);
+			if (recordingURL != null) {
+				in = new BufferedReader(
+						new InputStreamReader(recordingURL.openStream()));
+
+				String inputLine;
+				StringBuilder bldr = new StringBuilder();
+				while ((inputLine = in.readLine()) != null) {
+					bldr.append(inputLine);
+				}
+				parseString(recording, bldr.toString());
+			}
+		} finally {
+			if (in != null) {
+				in.close();
+			}
 		}
 	}
 }

@@ -109,3 +109,5 @@ POST http://localhost:4567/servers with payload below to load an inline recordin
       }]
     }
 
+To turn on debugging:
+-Dorg.slf4j.simpleLogger.defaultLogLevel=debug

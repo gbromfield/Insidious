@@ -73,36 +73,7 @@ public class TL1Session implements Session, TL1RecordingListener, Runnable {
 
 	@Override
     public void setRecording(Recording recording) throws Exception {
-		BufferedReader in = null;
-		try {
-			if (recording.recordingURL != null) {
-				URL recordingURL = new URL(recording.recordingURL);
-				if (recordingURL != null) {
-					in = new BufferedReader(
-							new InputStreamReader(recordingURL.openStream()));
-
-					String inputLine;
-					StringBuilder bldr = new StringBuilder();
-					while ((inputLine = in.readLine()) != null) {
-						bldr.append(inputLine);
-					}
-					Recording recordingFromURL = Recording.parseString(bldr.toString());
-					recordingFromURL.protocol = recording.protocol;
-					if (recording.port != null) {
-						recordingFromURL.port = recording.port;
-					}
-					_recordingMgr.setRecording(recordingFromURL);
-				}
-			} else 	if (recording.elements != null) {
-				_recordingMgr.setRecording(recording);
-			} else {
-				// error nothing specified
-			}
-		} finally {
-			if (in != null) {
-				in.close();
-			}
-		}
+		_recordingMgr.setRecording(recording);
     }
 
 	@Override
