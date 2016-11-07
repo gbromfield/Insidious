@@ -37,7 +37,7 @@ There are three modes of running.
 ### Log file Conversion
 To convert log files:
 
-    java -jar flirc2-0.0.1-jar-with-dependencies.jar -f <RA log file or directory> -rec <recording file>
+    java -jar flirc2-0.0.1-jar-with-dependencies.jar -f {RA log file or directory} -rec {recording file}
 
 ### Starting the Simulator
 To start the simulator:
@@ -79,8 +79,11 @@ A sample response:
 
 "Protocol" and "port" are copied back.
 
+### Getting a Server
+GET http://localhost:4567/server/{port}
+
 ### Deleting a Server
-DELETE http://localhost:4567/server/<port>
+DELETE http://localhost:4567/server/{port}
 
 ### Getting all Servers
 GET http://localhost:4567/servers
@@ -89,6 +92,11 @@ GET http://localhost:4567/servers
 DELETE http://localhost:4567/servers
 
 When a server is deleted, all sessions are terminated and you will no longer be able to connect to that port.
+
+### Getting a session on a server
+GET http://localhost:4567/server/{port}/session/{session}
+
+The session id can be retrieved from the GET http://localhost:4567/server/{port} api.
 
 ### Creating a TL1 Server on port 12349 and providing an inline recording
 POST http://localhost:4567/servers with payload below to load an inline recording:
@@ -125,3 +133,4 @@ POST http://localhost:4567/servers with payload below to load an inline recordin
 
 To turn on debugging:
 -Dorg.slf4j.simpleLogger.defaultLogLevel=debug
+-Dorg.slf4j.simpleLogger.log.com.grb.flirc2=DEBUG

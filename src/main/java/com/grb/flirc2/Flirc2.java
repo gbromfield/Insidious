@@ -133,6 +133,49 @@ public class Flirc2 {
 				return returnStr;
 			}
 		});
+		get("/server/:name/session/:session", (request, response) -> {
+			if (logger.isInfoEnabled()) {
+				logger.info(String.format("%s %s", request.requestMethod(), request.url()));
+			}
+			response.type("application/json");
+			String returnStr;
+			try {
+				response.type("application/json");
+				Integer port = Integer.valueOf(request.params(":name"));
+				String sessionId = request.params(":session");
+				if ((sessionId == null) || (sessionId.isEmpty())) {
+					returnStr = "{\"error\": \"No session id specified\"}";
+					if (logger.isErrorEnabled()) {
+						logger.error("No session id specified");
+					}
+				} else {
+					SSHServer server = serverMap.get(port);
+					if (server == null) {
+						returnStr = String.format("{\"error\": \"Server %d not found\"}", port);
+						if (logger.isErrorEnabled()) {
+							logger.error(String.format("Server %d not found", port));
+						}
+					} else {
+						Session session = server.getSession(sessionId);
+						if (session == null) {
+							returnStr = String.format("{\"error\": \"Sesson not found %s for Server %d\"}", sessionId, port);
+							if (logger.isErrorEnabled()) {
+								logger.error(String.format("Sesson not found %s for Server %d", sessionId, port));
+							}
+						} else {
+							return session.toJsonString();
+						}
+					}
+				}
+			} catch (NumberFormatException e) {
+				returnStr = String.format("{\"error\": \"Unable to convert %s to a port number\"}", request.params(":name"));
+				if (logger.isErrorEnabled()) {
+					logger.error(String.format("Unable to convert %s to a port number", request.params(":name")));
+				}
+			}
+			response.status(404);
+			return returnStr;
+		});
 	}
 
 	static public void startInteractive() {

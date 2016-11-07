@@ -140,4 +140,9 @@ public class TL1Session implements Session, TL1RecordingListener, Runnable {
 			}
 		}
 	}
+
+	@Override
+	public String toJsonString() {
+		return _recordingMgr.toJsonString();
+	}
 }

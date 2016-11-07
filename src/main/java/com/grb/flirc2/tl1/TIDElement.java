@@ -157,6 +157,19 @@ public class TIDElement {
         }
     }
 
+    public String toJsonString() {
+        StringBuilder bldr = new StringBuilder();
+        int index = 0;
+        for(InputElement inputElement: _inputElements) {
+            if (index > 0) {
+                bldr.append(",");
+            }
+            bldr.append(inputElement.toJsonString());
+            index++;
+        }
+        return bldr.toString();
+    }
+
     @Override
     public String toString() {
         StringBuilder bldr = new StringBuilder();

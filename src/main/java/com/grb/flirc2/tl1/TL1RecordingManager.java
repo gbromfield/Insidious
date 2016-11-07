@@ -135,7 +135,7 @@ public class TL1RecordingManager {
             }
         }
         if (logger.isDebugEnabled()) {
-            logger.debug(String.format("Session %s command database:\n %s", _sessionName, _commandDB.toString()));
+            logger.debug(String.format("Session %s command database:\n %s", _sessionName, _commandDB.toJsonString()));
         }
     }
 
@@ -217,6 +217,10 @@ public class TL1RecordingManager {
                 }
             }
         }
+    }
+
+    public String toJsonString() {
+        return _commandDB.toJsonString();
     }
 
     // TODO: NEED TO UPDATE ATAG ON OUTGOING

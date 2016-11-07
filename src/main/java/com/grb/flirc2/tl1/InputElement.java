@@ -51,6 +51,32 @@ public class InputElement {
         }
     }
 
+    public String toJsonString() {
+        int numLinked = 0;
+        InputElement linked = next;
+        while(linked != null) {
+            numLinked++;
+            linked = linked.next;
+        }
+        StringBuilder bldr = new StringBuilder();
+        bldr.append(String.format("\"%s:%s:%s... %s mult=%d left=%d linked=%d\": [", tl1InputMsg.getCmdCode(),
+                tl1InputMsg.getTid(), tl1InputMsg.getAid(),
+                TL1RecordingManager.DateFormatter.format(new Date(timestamp)),
+                multiplicity, left, numLinked));
+        OutputElement outputElement = output;
+        int index = 0;
+        while(outputElement != null) {
+            if (index > 0) {
+                bldr.append(",");
+            }
+            bldr.append(String.format("%s", outputElement.toJsonString()));
+            outputElement = outputElement.next;
+            index++;
+        }
+        bldr.append("]");
+        return bldr.toString();
+    }
+
     @Override
     public String toString() {
         int numLinked = 0;

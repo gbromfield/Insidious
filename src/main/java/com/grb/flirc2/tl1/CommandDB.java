@@ -98,6 +98,26 @@ public class CommandDB {
         }
     }
 
+    public String toJsonString() {
+        HashSet<String> tidSet = new HashSet<String>();
+        StringBuilder bldr = new StringBuilder("{");
+        int index = 0;
+        for(TIDElement tidElement: _tidElementMap.values()) {
+            if (!tidSet.contains(tidElement.getTID())) {
+                if (index > 0) {
+                    bldr.append(",");
+                }
+                tidSet.add(tidElement.getTID());
+                bldr.append(String.format("\"%s\": {", tidElement.getTID()));
+                bldr.append(tidElement.toJsonString());
+                bldr.append("}");
+                index++;
+            }
+        }
+        bldr.append("}");
+        return bldr.toString();
+    }
+
     @Override
     public String toString() {
         HashSet<String> tidSet = new HashSet<String>();

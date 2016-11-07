@@ -8,4 +8,5 @@ public interface Session {
 	public int getPort();
 	public void close();
 	public void setRecording(Recording recording) throws Exception;
+	public String toJsonString();
 }

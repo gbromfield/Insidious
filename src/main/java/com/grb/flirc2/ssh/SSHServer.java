@@ -36,19 +36,19 @@ public class SSHServer implements SSHServerClientListener {
     final static private String KEYFILE = "keys/host.ser";
     final static private String KEYFILEPATH = "src/main/resources/" + KEYFILE;
 
-    static public HashMap<String, Session> sessionMap = new HashMap<String, Session>();
-
     private String _restClient;
     private int _port;
     private Recording _recording;
     private SshServer _server;
     private long nextSessionsId = 1;
+    private HashMap<String, Session> _sessionMap;
 
     public SSHServer(String restClient, int listenPort) {
         _restClient = restClient;
     	_port = listenPort;
         _recording = null;
     	_server = null;
+        _sessionMap = new HashMap<String, Session>();
     }
 
     public int start() throws IOException, URISyntaxException {
@@ -126,13 +126,17 @@ public class SSHServer implements SSHServerClientListener {
         _recording = recording;
     }
 
+    public Session getSession(String id) {
+        return _sessionMap.get(id);
+    }
+
     public void removeSession(Session session) {
-        sessionMap.remove(session.getId());
+        _sessionMap.remove(session.getId());
     }
 
     public String toJSON() {
         StringBuilder bldr = new StringBuilder("[");
-        for(String id : sessionMap.keySet()) {
+        for(String id : _sessionMap.keySet()) {
             if (bldr.length() > 1) {
                 bldr.append(", ");
             }
@@ -149,8 +153,11 @@ public class SSHServer implements SSHServerClientListener {
     public void newSSHServerClient(SSHServerClient client) {
         try {
             Session session = SessionFactory.createSession(_recording.getProtocol(), getNextSessionId(), this, client);
+            if (_logger.isInfoEnabled()) {
+                _logger.info(String.format("Session %s on port %d created", session.getId(), getPort()));
+            }
             session.setRecording(_recording);
-            sessionMap.put(session.getId(), session);
+            _sessionMap.put(session.getId(), session);
         } catch (Exception e) {
             e.printStackTrace();
         }

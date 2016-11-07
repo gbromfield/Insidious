@@ -7,9 +7,10 @@
 5. AO multiplicity, Update the ATAG when sending out AOs.
 6. When the RA disconnects cleanup.
 7. <s>Refactor input arguments.</s>
-8. Implement Disconnects
+8. Implement Disconnects (maybe just inserting disconnects rather than scraping from logs is more efficient)
 9. <s>Support response continuations in interactive mode.</s>
 10. Scaleability - 2 threads are created per connection. Only 1 or a small number of connections required so not currently a problem.
-11. REST API to log the command DB
+11. <s>REST API to log the command DB</s>
 12. ADD CLI
 13. Add specification of the response to use when inputs exhausted
+14. Add swagger ui
