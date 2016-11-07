@@ -3,11 +3,11 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.grb</groupId>
-  <artifactId>insidious</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <artifactId>flirc2</artifactId>
+  <version>0.0.1</version>
   <packaging>jar</packaging>
 
-  <name>insidious</name>
+  <name>flirc2</name>
   <url>http://maven.apache.org</url>
 
   <properties>

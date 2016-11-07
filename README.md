@@ -21,26 +21,38 @@ Checkout and build the source from GitHub.
 
 ## Executable jar
 Under the "target" directory a standalone executable jar should exist: 
-target/insidious-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+target/flirc2-0.0.1-jar-with-dependencies.jar
+
+## Command Line Help
+
+    java -jar flirc2-0.0.1-jar-with-dependencies.jar -?
 
 ## Running
-There are two modes of running. 
+There are three modes of running. 
 
 1. Conversion mode that converts RA log files to recordings, and 
-2. Simulator mode that plays back recordings
-
+2. Simulator mode that plays back recordings, and
+3. Interactive mode that converts TL1 raw output to an escaped single line suitable for a recording file.
+    
 ### Log file Conversion
 To convert log files:
 
-    java -jar target/insidious-0.0.1-SNAPSHOT-jar-with-dependencies.jar -i <RA log file> -c <recording file>
+    java -jar flirc2-0.0.1-jar-with-dependencies.jar -f <RA log file or directory> -rec <recording file>
 
 ### Starting the Simulator
 To start the simulator:
 
-    java -jar target/insidious-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+    java -jar flirc2-0.0.1-jar-with-dependencies.jar
 
 When the simulator is started it receives instructions through the rest interface (port 4567) to load recordings 
 and open up ports.
+
+### Interactive Mode
+To start interactive mode:
+
+    java -jar flirc2-0.0.1-jar-with-dependencies.jar -i
+
+
 
 ## REST Interface
 
@@ -50,7 +62,9 @@ POST http://localhost:4567/servers with payload below to load a recording from a
     {
       "protocol": "tl1",
       "port": "12349",
-      "recordingURL": "file:///Users/gbromfie/Development/Insidious/samples/sample2.json"
+      "recordingURLs": [
+          "file:///Users/gbromfie/Development/Insidious/samples/sample2.json"
+      ]
     }
 
 If the port parameter is onitted or "0", a port will be picked and the value will be returned in the response.

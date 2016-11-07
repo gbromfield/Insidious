@@ -342,8 +342,8 @@ public class Flirc2 {
 		}
 
 		if ((props.getInputFilenames() == null) || (props.getInputFilenames().size() == 0)) {
-			Flirc2 ins = new Flirc2();
-			ins.startREST();
+			Flirc2 flirc2 = new Flirc2();
+			flirc2.startREST();
 			try {
 				ExitLatch.await();
 			} catch (InterruptedException e1) {
@@ -357,7 +357,6 @@ public class Flirc2 {
 			ctx = new Flirc2OutputContext(props);
 			LogX logx = new LogX(props);
 			logx.run();
-			System.out.println(ctx.logItemsToString());
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
