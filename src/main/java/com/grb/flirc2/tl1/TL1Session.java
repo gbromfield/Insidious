@@ -58,7 +58,7 @@ public class TL1Session implements Session, TL1RecordingListener, Runnable {
 	@Override
 	public void close() {
 		if (logger.isInfoEnabled()) {
-			logger.info(String.format("closing client on port %d", _sshServer.getPort()));
+			logger.info(String.format("closing session %s on port %d", _id, _sshServer.getPort()));
 		}
 		_sshServer.removeSession(this);
 		_client.close();

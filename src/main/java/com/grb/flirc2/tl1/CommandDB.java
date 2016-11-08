@@ -44,7 +44,7 @@ public class CommandDB {
         tidElement.add(newElement);
     }
 
-    public void add(OutputElement newElement) {
+    public InputElement add(OutputElement newElement) {
         TL1OutputMessage output = newElement.tl1OutputMsg;
         if (output instanceof TL1AckMessage) {
             TL1AckMessage ack = (TL1AckMessage)output;
@@ -52,20 +52,21 @@ public class CommandDB {
             for (TIDElement element : _tidElementMap.values()) {
                 if (element.add(newElement) != null) {
                     // found
-                    return;
+                    return null;
                 }
             }
             // error not found
         } else if (output instanceof TL1ResponseMessage) {
             TL1ResponseMessage resp = (TL1ResponseMessage)output;
-            add(resp.getTid(), newElement);
+            return add(resp.getTid(), newElement);
         } else if (output instanceof TL1AOMessage) {
             TL1AOMessage ao = (TL1AOMessage)output;
-            add(ao.getTid(), newElement);
+            return add(ao.getTid(), newElement);
         }
+        return null;
     }
 
-    private void add(String tid, OutputElement newElement) {
+    private InputElement add(String tid, OutputElement newElement) {
         TIDElement tidElement = _tidElementMap.get(tid);
             if (tidElement == null) {
             tidElement = new TIDElement(tid);
@@ -82,11 +83,12 @@ public class CommandDB {
                     TIDElement merged = tidElement.merge(blankTidElement);
                     _tidElementMap.put("", merged);
                     _tidElementMap.put(tid, merged);
-                    return;
+                    return input;
                 }
             }
             // error not found
         }
+        return input;
     }
 
     public InputElement getInputElement(TL1InputMessage input) throws InputElementNotFoundException {

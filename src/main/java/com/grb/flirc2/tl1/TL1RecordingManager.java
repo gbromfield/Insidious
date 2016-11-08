@@ -35,27 +35,37 @@ public class TL1RecordingManager {
         	} else if (outputMsg instanceof TL1AckMessage) {
         		TL1AckMessage ack = (TL1AckMessage)outputMsg;
         		ack.setCTAG(_ctag);
-        	} else {
+        	} else if ((outputMsg instanceof TL1AOMessage) && (_renumberAOs)) {
+                TL1AOMessage ao = (TL1AOMessage)outputMsg;
+                ao.setATAG(String.valueOf(_atag++));
         	}
+        }
+
+        public void sendOutput() {
+            if (_element.tl1OutputMsg instanceof TL1AOMessage) {
+                for(int i = 0; i < _element.multiplicity; i++) {
+                    updateTag(_element.tl1OutputMsg);
+                    _listener.onTL1Output(_element.tl1OutputMsg);
+                }
+            } else {
+                updateTag(_element.tl1OutputMsg);
+                for(int i = 0; i < _element.multiplicity; i++) {
+                    _listener.onTL1Output(_element.tl1OutputMsg);
+                }
+            }
         }
 
         @Override
         public void run() {
             // send _element.tl1OutputMsg
-        	updateTag(_element.tl1OutputMsg);
-            for(int i = 0; i < _element.multiplicity; i++) {
-                _listener.onTL1Output(_element.tl1OutputMsg);
-            }
+            sendOutput();
             Long currentTS = _element.timestamp;
             while(_element.next != null) {
                 _element = _element.next;
                 if((currentTS == null) || (_element.timestamp == null) ||
                         ((_element.timestamp - currentTS) == 0)) {
                     // send _element.tl1OutputMsg
-                	updateTag(_element.tl1OutputMsg);
-                    for(int i = 0; i < _element.multiplicity; i++) {
-                        _listener.onTL1Output(_element.tl1OutputMsg);
-                    }
+                    sendOutput();
                 } else {
                     _timer.schedule(new TL1RecordingTimerTask(_element, _ctag), _element.timestamp - currentTS);
                     break;
@@ -70,6 +80,8 @@ public class TL1RecordingManager {
 	private TL1AgentDecoder _agentDecoder;
 	private TL1ManagerDecoder _managerDecoder;
 	private TL1RecordingListener _listener;
+    private boolean _renumberAOs;
+    private int _atag;
 
     public TL1RecordingManager(String sessionName, TL1RecordingListener listener) {
     	_sessionName = sessionName;
@@ -78,6 +90,8 @@ public class TL1RecordingManager {
     	_timer = null;
     	_agentDecoder = new TL1AgentDecoder();
     	_managerDecoder = new TL1ManagerDecoder();
+        _renumberAOs = false;
+        _atag = 1;
     }
 
     public void close() {
@@ -123,8 +137,18 @@ public class TL1RecordingManager {
                                 int multiplicity = 1;
                                 if (element.multiplicity != null) {
                                     multiplicity = element.multiplicity;
+                                    if ((multiplicity > 1) && (tl1Output instanceof TL1AOMessage)) {
+                                        // Need to renumber AOs when AO multiplicity is greater than 1
+                                        _renumberAOs = true;
+                                    }
                                 }
-                                addOutput(tl1Output, element.timestamp.getTime(), multiplicity);
+                                InputElement input = addOutput(tl1Output, element.timestamp.getTime(), multiplicity);
+                                if ((input != null) && (tl1Output instanceof TL1AOMessage)) {
+                                    if (input.multiplicity > 1) {
+                                        // Need to renumber AOs when linked command multiplicity is greater than 1
+                                        _renumberAOs = true;
+                                    }
+                                }
                             }
                         }
                     }
@@ -156,13 +180,13 @@ public class TL1RecordingManager {
     /**
      * For going from json to internal structure
      */
-    public void addOutput(TL1OutputMessage outputMsg, Long timestamp, int multiplicity) {
+    public InputElement addOutput(TL1OutputMessage outputMsg, Long timestamp, int multiplicity) {
         OutputElement newElement = new OutputElement();
         newElement.tl1OutputMsg = outputMsg;
         newElement.next = null;
         newElement.timestamp = timestamp;
         newElement.multiplicity = multiplicity;
-        _commandDB.add(newElement);
+        return _commandDB.add(newElement);
     }
 
     public void processInput(ByteBuffer readBuffer) throws TL1MessageMaxSizeExceededException, ParseException {
@@ -185,8 +209,10 @@ public class TL1RecordingManager {
             }
             OutputElement outElement = inElement.output;
             if (outElement == null) {
-                throw new InputElementNotFoundException(input, _commandDB.resolveTID(input.getTid()),
-                        InputElementNotFoundReason.NO_OUTPUTS, null);
+                if (logger.isInfoEnabled()) {
+                    logger.info(String.format("Session %s - No output for TL1 command: \"%s\", this command will timeout",
+                            _sessionName, input.toString()));
+                }
             } else {
                 if ((inElement.timestamp == null) || (outElement.timestamp == null) ||
                         ((outElement.timestamp - inElement.timestamp) <= 0)) {
