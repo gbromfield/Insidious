@@ -59,7 +59,7 @@
     </dependency>
     <dependency>
     	<groupId>com.ciena</groupId>
-    	<artifactId>logx-insidious</artifactId>
+    	<artifactId>logx-flirc2</artifactId>
     	<version>0.0.1-SNAPSHOT</version>
     </dependency>
   </dependencies>

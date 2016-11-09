@@ -1,5 +1,5 @@
 ## Dependencies
-Insidious needs:
+Flirc2 needs:
 
 1. Java 8
 2. Maven
